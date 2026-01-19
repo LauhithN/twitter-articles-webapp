@@ -9,6 +9,7 @@ A fast, brutalist webapp displaying the most popular articles shared on Twitter/
 - **Database**: Supabase (PostgreSQL)
 - **Data Collection**: Node.js scraper + GitHub Actions
 - **Hosting**: Vercel
+- **MCP Integration**: Supabase MCP Server (optional)
 
 ## Quick Start
 
@@ -125,3 +126,30 @@ node index.js --dry-run  # Test without writing to DB
 - **GitHub Actions**: Free tier (2000 min/month)
 
 **Total: $0/month**
+
+## MCP Integration (Optional)
+
+This project supports the Supabase MCP server, allowing Claude to directly interact with your database.
+
+### Setup
+
+1. Copy the MCP config template:
+   ```bash
+   cp mcp-config.example.json mcp-config.json
+   ```
+
+2. Get your Supabase service role key from your project settings
+
+3. Update `mcp-config.json` with your credentials
+
+4. See [MCP_SETUP.md](MCP_SETUP.md) for detailed instructions
+
+### What You Can Do
+
+With MCP configured, Claude can:
+- Query your articles database directly
+- Insert/update/delete records
+- Run custom SQL queries
+- Monitor database health
+
+**Security Note:** Never commit `mcp-config.json` with real credentials!
