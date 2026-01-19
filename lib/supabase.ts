@@ -22,9 +22,14 @@ export async function getArticles(limit: number = 50) {
   if (!client) return []
 
   try {
+    // Calculate date 7 days ago
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
     const { data, error } = await client
       .from('articles')
       .select('*')
+      .gte('first_seen_at', sevenDaysAgo.toISOString())
       .order('likes', { ascending: false })
       .limit(limit)
 

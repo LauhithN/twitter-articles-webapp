@@ -1,6 +1,6 @@
 import Parser from 'rss-parser'
 import { createClient } from '@supabase/supabase-js'
-import { getWorkingInstance, getAccountFeedUrls } from './sources.js'
+import { getWorkingInstance, getAccountFeedUrls, ARTICLE_AUTHORS } from './sources.js'
 
 const parser = new Parser({
   timeout: 10000,
@@ -23,75 +23,53 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // Check if running in dry-run mode
 const isDryRun = process.argv.includes('--dry-run')
 
-// URL patterns to extract from tweets
-const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/g
-
-// Domains to exclude (Twitter itself, image hosts, etc.)
-const EXCLUDED_DOMAINS = [
-  'twitter.com',
-  'x.com',
-  't.co',
-  'pic.twitter.com',
-  'pbs.twimg.com',
-  'video.twimg.com',
-  'nitter.net',
-  'nitter.poast.org',
-  'youtube.com',
-  'youtu.be',
-  'instagram.com',
-  'facebook.com',
-  'tiktok.com',
+// Patterns to identify X/Twitter article URLs
+const ARTICLE_URL_PATTERNS = [
+  /https?:\/\/(twitter\.com|x\.com)\/\w+\/status\/\d+/g,  // Regular tweet/article URLs
+  /https?:\/\/(twitter\.com|x\.com)\/i\/article\/\d+/g,   // Direct article URLs
 ]
 
-function extractUrls(text) {
-  const urls = text.match(URL_REGEX) || []
-  return urls.filter(url => {
-    try {
-      const hostname = new URL(url).hostname.toLowerCase()
-      return !EXCLUDED_DOMAINS.some(domain =>
-        hostname === domain || hostname.endsWith(`.${domain}`)
-      )
-    } catch {
-      return false
-    }
-  })
+// Extract article URLs from tweet content
+function extractArticleUrls(text) {
+  const urls = []
+  for (const pattern of ARTICLE_URL_PATTERNS) {
+    const matches = text.match(pattern) || []
+    urls.push(...matches)
+  }
+  return [...new Set(urls)] // Dedupe
 }
 
-function extractDomain(url) {
-  try {
-    const hostname = new URL(url).hostname
-    return hostname.replace(/^www\./, '')
-  } catch {
-    return null
-  }
+// Check if content looks like a long-form article (has substantial text)
+function isLongFormContent(text) {
+  // Articles typically have more content
+  const cleanText = text.replace(/<[^>]*>/g, '').trim()
+  return cleanText.length > 280 // Longer than a single tweet
 }
 
-async function resolveRedirect(url, maxRedirects = 3) {
-  // Skip if not a t.co link
-  if (!url.includes('t.co/')) {
-    return url
-  }
+// Extract a title from article content
+function extractTitle(text, maxLength = 100) {
+  // Remove HTML tags
+  const cleanText = text.replace(/<[^>]*>/g, '').trim()
 
-  try {
-    let currentUrl = url
-    for (let i = 0; i < maxRedirects; i++) {
-      const response = await fetch(currentUrl, {
-        method: 'HEAD',
-        redirect: 'manual',
-        signal: AbortSignal.timeout(5000),
-      })
-
-      const location = response.headers.get('location')
-      if (location && response.status >= 300 && response.status < 400) {
-        currentUrl = location
-      } else {
-        break
-      }
+  // Try to find a clear title pattern (first sentence or line)
+  const lines = cleanText.split(/[\n\r]+/).filter(l => l.trim())
+  if (lines.length > 0) {
+    const firstLine = lines[0].trim()
+    // If first line is short enough, use it as title
+    if (firstLine.length <= maxLength && firstLine.length > 10) {
+      return firstLine
     }
-    return currentUrl
-  } catch {
-    return url
   }
+
+  // Otherwise, take first N characters
+  if (cleanText.length <= maxLength) {
+    return cleanText
+  }
+
+  // Cut at word boundary
+  const truncated = cleanText.slice(0, maxLength)
+  const lastSpace = truncated.lastIndexOf(' ')
+  return (lastSpace > 50 ? truncated.slice(0, lastSpace) : truncated) + '...'
 }
 
 async function fetchFeed(feedUrl) {
@@ -104,33 +82,44 @@ async function fetchFeed(feedUrl) {
   }
 }
 
-async function extractArticlesFromItem(item) {
-  const articles = []
-  const content = item.content || item.contentSnippet || item.title || ''
-  const urls = extractUrls(content)
+// Extract article data from RSS item
+function extractArticleFromItem(item, authorUsername) {
+  const content = item.content || item.contentSnippet || ''
+  const title = extractTitle(content)
 
-  for (const url of urls) {
-    const resolvedUrl = await resolveRedirect(url)
-    const domain = extractDomain(resolvedUrl)
+  // Get the tweet URL as the article URL
+  let articleUrl = item.link || item.guid
 
-    if (domain) {
-      articles.push({
-        url: resolvedUrl,
-        domain,
-        title: item.title || 'Untitled',
-        tweetId: item.guid || item.link,
-        tweetAuthor: item.creator || 'unknown',
-        tweetText: item.contentSnippet || '',
-        pubDate: item.pubDate ? new Date(item.pubDate) : new Date(),
-      })
-    }
+  // Convert Nitter URLs back to X.com URLs
+  if (articleUrl) {
+    articleUrl = articleUrl
+      .replace(/nitter\.[^/]+/, 'x.com')
+      .replace('twitter.com', 'x.com')
   }
 
-  return articles
+  // Skip if no valid URL
+  if (!articleUrl || !articleUrl.includes('/status/')) {
+    return null
+  }
+
+  // Get author display name from the feed creator field
+  const authorName = item.creator || authorUsername
+
+  return {
+    url: articleUrl,
+    title: title,
+    domain: 'x.com',
+    authorUsername: authorUsername,
+    authorName: authorName,
+    authorUrl: `https://x.com/${authorUsername}`,
+    description: content.replace(/<[^>]*>/g, '').slice(0, 500),
+    pubDate: item.pubDate ? new Date(item.pubDate) : new Date(),
+    tweetId: articleUrl.split('/status/')[1]?.split(/[?#]/)[0],
+  }
 }
 
 async function upsertArticle(article) {
-  const { url, domain, title, tweetId, tweetAuthor, tweetText, pubDate } = article
+  const { url, title, domain, authorUsername, authorName, authorUrl, description, pubDate, tweetId } = article
 
   // First, try to get existing article
   const { data: existing } = await supabase
@@ -140,11 +129,10 @@ async function upsertArticle(article) {
     .single()
 
   if (existing) {
-    // Update tweet count
+    // Update existing article
     const { error } = await supabase
       .from('articles')
       .update({
-        tweet_count: existing.tweet_count + 1,
         last_updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
@@ -152,47 +140,34 @@ async function upsertArticle(article) {
     if (error) {
       console.error(`Failed to update article ${url}:`, error.message)
     } else {
-      console.log(`Updated: ${url} (${existing.tweet_count + 1} tweets)`)
+      console.log(`Updated: ${title.slice(0, 50)}...`)
     }
-
-    // Insert tweet record
-    await supabase.from('tweets').upsert({
-      id: tweetId,
-      article_id: existing.id,
-      author_username: tweetAuthor,
-      text: tweetText,
-      created_at: pubDate.toISOString(),
-    }, {
-      onConflict: 'id',
-    })
 
   } else {
     // Insert new article
-    const { data: newArticle, error } = await supabase
+    const { error } = await supabase
       .from('articles')
       .insert({
         url,
         domain,
-        title: title.slice(0, 500), // Truncate long titles
+        title: title.slice(0, 500),
         tweet_count: 1,
-        description: tweetText.slice(0, 500) || null,
+        description: description || null,
+        author_name: authorName,
+        author_username: authorUsername,
+        author_url: authorUrl,
+        // These would need to be fetched from Twitter API for real data
+        likes: 0,
+        retweets: 0,
+        impressions: 0,
+        bookmarks: 0,
+        shares: 0,
       })
-      .select('id')
-      .single()
 
     if (error) {
       console.error(`Failed to insert article ${url}:`, error.message)
     } else {
-      console.log(`New article: ${url}`)
-
-      // Insert tweet record
-      await supabase.from('tweets').insert({
-        id: tweetId,
-        article_id: newArticle.id,
-        author_username: tweetAuthor,
-        text: tweetText,
-        created_at: pubDate.toISOString(),
-      })
+      console.log(`New article: ${title.slice(0, 50)}...`)
     }
   }
 }
@@ -215,7 +190,7 @@ async function cleanOldArticles() {
 }
 
 async function main() {
-  console.log('Starting Twitter articles scraper...')
+  console.log('Starting X Articles scraper...')
   console.log(`Mode: ${isDryRun ? 'DRY RUN' : 'LIVE'}`)
 
   try {
@@ -226,25 +201,30 @@ async function main() {
 
     // Get feed URLs
     const feedUrls = getAccountFeedUrls(instance)
-    console.log(`Fetching ${feedUrls.length} feeds...`)
+    console.log(`Fetching ${feedUrls.length} feeds from article authors...`)
 
     // Collect all articles
     const allArticles = []
 
-    for (const feedUrl of feedUrls) {
-      console.log(`Fetching: ${feedUrl}`)
+    for (let i = 0; i < feedUrls.length; i++) {
+      const feedUrl = feedUrls[i]
+      const authorUsername = ARTICLE_AUTHORS[i]
+
+      console.log(`Fetching: @${authorUsername}`)
       const items = await fetchFeed(feedUrl)
 
       for (const item of items) {
-        const articles = await extractArticlesFromItem(item)
-        allArticles.push(...articles)
+        const article = extractArticleFromItem(item, authorUsername)
+        if (article) {
+          allArticles.push(article)
+        }
       }
 
       // Small delay to be nice to the server
       await new Promise(resolve => setTimeout(resolve, 500))
     }
 
-    console.log(`Found ${allArticles.length} article references`)
+    console.log(`Found ${allArticles.length} articles`)
 
     // Deduplicate by URL
     const uniqueUrls = new Map()
@@ -259,7 +239,7 @@ async function main() {
     if (isDryRun) {
       console.log('\nDRY RUN - Would upsert these articles:')
       for (const [url, article] of uniqueUrls) {
-        console.log(`  - ${article.domain}: ${article.title.slice(0, 60)}...`)
+        console.log(`  - @${article.authorUsername}: ${article.title.slice(0, 60)}...`)
       }
     } else {
       // Upsert to database

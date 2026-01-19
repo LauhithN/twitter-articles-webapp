@@ -11,10 +11,10 @@ export function Header({ lastUpdated }: HeaderProps) {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
-            Popular on X
+            Viral Articles
           </h1>
           <p className="text-body text-muted mt-1">
-            Most viral tweets in the last 7 days
+            Most viral X articles in the last 7 days
           </p>
         </div>
 

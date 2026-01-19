@@ -6,28 +6,29 @@ export const NITTER_INSTANCES = [
   'https://nitter.1d4.us',
 ]
 
-// Popular tech Twitter accounts to scrape
-// These accounts frequently share interesting articles
-export const TECH_ACCOUNTS = [
-  'levelsio',
-  'swyx',
-  'raikiasatra',
-  'tldrdan',
-  'dannypostmaa',
-  'marc_louvion',
-  'csaborsky',
-  't3dotgg',
-  'aiaborov',
-  'kelseyhightower',
-  'adamwathan',
-  'dhh',
-  'tabortalks',
-  'jaredpalmer',
-  'leeerob',
-  'rauchg',
-  'shpigford',
-  'paborawski',
-  'dvassallo',
+// Popular accounts that write Twitter/X Articles (long-form content)
+// These accounts frequently publish viral articles on X
+export const ARTICLE_AUTHORS = [
+  'thedankoe',      // Dan Koe - self-improvement, business
+  'naval',          // Naval Ravikant - wealth, philosophy
+  'alexhormozi',    // Alex Hormozi - business, marketing
+  'levelsio',       // Pieter Levels - indie hacking, startups
+  'karpathy',       // Andrej Karpathy - AI, machine learning
+  'JamesClear',     // James Clear - habits, productivity
+  'SahilBloom',     // Sahil Bloom - business, growth
+  'waitbutwhy',     // Tim Urban - long-form essays
+  'david_perell',   // David Perell - writing, learning
+  'hwang_jesse',    // Jesse Hwang - business
+  'dickiebush',     // Dickie Bush - writing, content
+  'Nicolascole77',  // Nicolas Cole - writing
+  'aaaborukaev',    // Sasha - tech, startups
+  'Julian',         // Julian Shapiro - startups, writing
+  'george__mack',   // George Mack - thinking, business
+  'LifeMathMoney',  // Life Math Money - finance
+  'thepatwalls',    // Pat Walls - startups
+  'sweatystartup',  // Nick Huber - business
+  'ankurnagpal',    // Ankur Nagpal - entrepreneurship
+  'ValaAfshar',     // Vala Afshar - tech, business
 ]
 
 // Alternative: Popular tech hashtag searches (if supported by Nitter instance)
@@ -41,7 +42,7 @@ export const SEARCH_TERMS = [
 
 // Build RSS feed URLs for accounts
 export function getAccountFeedUrls(instance) {
-  return TECH_ACCOUNTS.map(account => `${instance}/${account}/rss`)
+  return ARTICLE_AUTHORS.map(account => `${instance}/${account}/rss`)
 }
 
 // Get a working Nitter instance (tries multiple)

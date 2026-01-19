@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Popular on X - Most Shared Articles',
-  description: 'Discover the most shared articles on Twitter/X in the last 24 hours. No algorithms, just popular content.',
+  title: 'Viral Articles on X',
+  description: 'Discover the most viral articles shared on X in the last 7 days.',
   openGraph: {
     title: 'Popular on X',
     description: 'Most shared articles on Twitter/X',
@@ -43,7 +43,7 @@ export default function RootLayout({
         <footer className="border-t-2 border-black mt-16">
           <div className="max-w-6xl mx-auto px-4 py-6">
             <p className="text-meta text-muted">
-              Data collected from public tweets. Updated hourly.
+              Data collected from public posts on X.
             </p>
           </div>
         </footer>
