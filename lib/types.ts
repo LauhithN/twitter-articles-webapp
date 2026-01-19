@@ -4,6 +4,14 @@ export interface Article {
   title: string
   domain: string
   tweet_count: number
+  likes: number
+  retweets: number
+  impressions: number
+  bookmarks: number
+  shares: number
+  author_name: string | null
+  author_username: string | null
+  author_url: string | null
   first_seen_at: string
   last_updated_at: string
   preview_image: string | null

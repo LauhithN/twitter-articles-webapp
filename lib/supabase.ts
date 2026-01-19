@@ -25,7 +25,7 @@ export async function getArticles(limit: number = 50) {
     const { data, error } = await client
       .from('articles')
       .select('*')
-      .order('tweet_count', { ascending: false })
+      .order('likes', { ascending: false })
       .limit(limit)
 
     if (error) {

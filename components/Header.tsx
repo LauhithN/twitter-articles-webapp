@@ -14,7 +14,7 @@ export function Header({ lastUpdated }: HeaderProps) {
             Popular on X
           </h1>
           <p className="text-body text-muted mt-1">
-            Most shared articles in the last 24 hours
+            Most viral tweets in the last 7 days
           </p>
         </div>
 
