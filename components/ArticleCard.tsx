@@ -7,12 +7,7 @@ interface ArticleCardProps {
 
 export function ArticleCard({ article }: ArticleCardProps) {
   return (
-    <a
-      href={article.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block border-2 border-black p-4 hover:bg-hover-bg transition-colors duration-150"
-    >
+    <div className="border-2 border-black p-4 hover:bg-hover-bg transition-colors duration-150">
       {/* Author Section */}
       {article.author_name && (
         <div className="flex items-center gap-2 mb-3">
@@ -26,7 +21,6 @@ export function ArticleCard({ article }: ArticleCardProps) {
               target="_blank"
               rel="noopener noreferrer"
               className="text-meta text-accent hover:underline"
-              onClick={(e) => e.stopPropagation()}
             >
               @{article.author_username}
             </a>
@@ -34,10 +28,17 @@ export function ArticleCard({ article }: ArticleCardProps) {
         </div>
       )}
 
-      {/* Title */}
-      <h2 className="text-title text-foreground mb-2 leading-tight">
-        {article.title}
-      </h2>
+      {/* Title as Link */}
+      <a
+        href={article.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block"
+      >
+        <h2 className="text-title text-foreground mb-2 leading-tight hover:text-accent transition-colors">
+          {article.title}
+        </h2>
+      </a>
 
       {/* Description */}
       {article.description && (
@@ -73,10 +74,15 @@ export function ArticleCard({ article }: ArticleCardProps) {
       {/* Footer */}
       <div className="flex justify-between items-center text-meta text-muted">
         <span>Updated {formatTimeAgo(article.last_updated_at)}</span>
-        <span className="font-mono bg-accent text-black px-2 py-0.5">
-          {formatNumber(article.tweet_count)} quotes
-        </span>
+        <a
+          href={article.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono bg-accent text-black px-2 py-0.5 hover:bg-black hover:text-accent transition-colors"
+        >
+          View Tweet →
+        </a>
       </div>
-    </a>
+    </div>
   )
 }
