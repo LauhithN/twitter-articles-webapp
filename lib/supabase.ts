@@ -1,36 +1,63 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+let supabase: SupabaseClient | null = null
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+function getSupabaseClient(): SupabaseClient | null {
+  if (supabase) return supabase
 
-export async function getArticles(limit: number = 50) {
-  const { data, error } = await supabase
-    .from('articles')
-    .select('*')
-    .order('tweet_count', { ascending: false })
-    .limit(limit)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (error) {
-    console.error('Error fetching articles:', error)
-    return []
-  }
-
-  return data
-}
-
-export async function getLastUpdatedTime() {
-  const { data, error } = await supabase
-    .from('articles')
-    .select('last_updated_at')
-    .order('last_updated_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error || !data) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase credentials not configured')
     return null
   }
 
-  return data.last_updated_at
+  supabase = createClient(supabaseUrl, supabaseAnonKey)
+  return supabase
+}
+
+export async function getArticles(limit: number = 50) {
+  const client = getSupabaseClient()
+  if (!client) return []
+
+  try {
+    const { data, error } = await client
+      .from('articles')
+      .select('*')
+      .order('tweet_count', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error fetching articles:', error)
+      return []
+    }
+
+    return data || []
+  } catch (err) {
+    console.error('Failed to fetch articles:', err)
+    return []
+  }
+}
+
+export async function getLastUpdatedTime() {
+  const client = getSupabaseClient()
+  if (!client) return null
+
+  try {
+    const { data, error } = await client
+      .from('articles')
+      .select('last_updated_at')
+      .order('last_updated_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error || !data) {
+      return null
+    }
+
+    return data.last_updated_at
+  } catch {
+    return null
+  }
 }
