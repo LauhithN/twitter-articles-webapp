@@ -85,6 +85,86 @@ const DEMO_ARTICLES: Article[] = [
   },
 ]
 
+// Honourable mentions
+const HONOURABLE_MENTIONS: Article[] = [
+  {
+    id: '5',
+    url: 'https://x.com/milesdeutscher/status/2011867442105237683',
+    title: 'Crypto Market Analysis',
+    domain: 'x.com',
+    tweet_count: 1800,
+    likes: 45000,
+    retweets: 12000,
+    impressions: 18000000,
+    bookmarks: 15000,
+    shares: 4000,
+    author_name: 'Miles Deutscher',
+    author_username: 'milesdeutscher',
+    author_url: 'https://x.com/milesdeutscher',
+    first_seen_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    last_updated_at: new Date(Date.now() - 5400000).toISOString(),
+    preview_image: null,
+    description: null,
+  },
+  {
+    id: '6',
+    url: 'https://x.com/thedankoe/status/2012956603297964167',
+    title: 'The Future of Content Creation',
+    domain: 'x.com',
+    tweet_count: 2100,
+    likes: 52000,
+    retweets: 14000,
+    impressions: 22000000,
+    bookmarks: 18000,
+    shares: 5000,
+    author_name: 'Dan Koe',
+    author_username: 'thedankoe',
+    author_url: 'https://x.com/thedankoe',
+    first_seen_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+    last_updated_at: new Date(Date.now() - 3600000).toISOString(),
+    preview_image: null,
+    description: null,
+  },
+  {
+    id: '7',
+    url: 'https://x.com/noironsol/status/2013078582608966104',
+    title: 'Building in Public',
+    domain: 'x.com',
+    tweet_count: 1500,
+    likes: 38000,
+    retweets: 9000,
+    impressions: 15000000,
+    bookmarks: 12000,
+    shares: 3500,
+    author_name: 'noironsol',
+    author_username: 'noironsol',
+    author_url: 'https://x.com/noironsol',
+    first_seen_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+    last_updated_at: new Date(Date.now() - 7200000).toISOString(),
+    preview_image: null,
+    description: null,
+  },
+  {
+    id: '8',
+    url: 'https://x.com/XCreators/status/2011957172821737574',
+    title: 'X Creator Program Announcement',
+    domain: 'x.com',
+    tweet_count: 3500,
+    likes: 67000,
+    retweets: 18000,
+    impressions: 28000000,
+    bookmarks: 22000,
+    shares: 8000,
+    author_name: 'X Creators',
+    author_username: 'XCreators',
+    author_url: 'https://x.com/XCreators',
+    first_seen_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    last_updated_at: new Date(Date.now() - 10800000).toISOString(),
+    preview_image: null,
+    description: null,
+  },
+]
+
 export default async function Home() {
   let articles: Article[] = []
   let lastUpdated: string | null = null
@@ -118,6 +198,14 @@ export default async function Home() {
     <>
       <Header lastUpdated={lastUpdated} />
       <ArticleGrid articles={articles} />
+
+      {/* Honourable Mentions Section */}
+      <section className="mt-12">
+        <h2 className="text-2xl font-bold text-black border-b-2 border-black pb-2 mb-6">
+          Honourable Mentions
+        </h2>
+        <ArticleGrid articles={HONOURABLE_MENTIONS} />
+      </section>
     </>
   )
 }
