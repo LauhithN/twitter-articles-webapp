@@ -1,0 +1,11 @@
+echo "🤖 BugBot: Running pre-commit checks..."
+
+# Run lint-staged
+npx lint-staged
+
+# Run custom bug detection
+if [ -f scripts/bug-detector.js ]; then
+  node scripts/bug-detector.js --pre-commit
+fi
+
+echo "✅ BugBot: Pre-commit checks complete!"

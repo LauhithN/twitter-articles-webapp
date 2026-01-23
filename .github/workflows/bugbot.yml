@@ -1,0 +1,136 @@
+name: BugBot - Automated Bug Detection
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  bug-detection:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Python packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Node dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci || npm install
+          fi
+
+      - name: Install Python dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          pip install pylint flake8 bandit safety
+
+      - name: Run ESLint (JavaScript/TypeScript)
+        if: hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') != ''
+        run: |
+          if [ -f package.json ]; then
+            npx eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0 || echo "::warning::ESLint found issues"
+          fi
+        continue-on-error: true
+
+      - name: Run TypeScript Compiler Check
+        if: hashFiles('tsconfig.json') != ''
+        run: |
+          if command -v tsc &> /dev/null; then
+            tsc --noEmit || echo "::error::TypeScript compilation failed"
+          fi
+        continue-on-error: true
+
+      - name: Run Pylint (Python)
+        if: hashFiles('**/*.py') != ''
+        run: |
+          find . -name "*.py" -not -path "*/venv/*" -not -path "*/node_modules/*" | xargs pylint --exit-zero --output-format=colorized
+        continue-on-error: true
+
+      - name: Run Flake8 (Python)
+        if: hashFiles('**/*.py') != ''
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+
+      - name: Run Bandit (Python Security)
+        if: hashFiles('**/*.py') != ''
+        run: |
+          bandit -r . -ll -f json -o bandit-report.json || echo "::warning::Bandit found security issues"
+        continue-on-error: true
+
+      - name: Check for vulnerable dependencies (Python)
+        if: hashFiles('requirements.txt') != ''
+        run: |
+          safety check --json || echo "::warning::Vulnerable Python dependencies found"
+        continue-on-error: true
+
+      - name: Run npm audit (Node.js)
+        if: hashFiles('package.json') != ''
+        run: |
+          npm audit --audit-level=high || echo "::warning::Vulnerable npm packages found"
+        continue-on-error: true
+
+      - name: Run Custom Bug Detection Script
+        run: |
+          if [ -f scripts/bug-detector.js ]; then
+            node scripts/bug-detector.js
+          elif [ -f scripts/bug-detector.py ]; then
+            python scripts/bug-detector.py
+          fi
+        continue-on-error: true
+
+      - name: Run Tests
+        run: |
+          if [ -f package.json ] && grep -q "\"test\":" package.json; then
+            npm test || echo "::error::Tests failed"
+          fi
+        continue-on-error: true
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 🤖 BugBot Analysis Results\n\n';
+            comment += '✅ Automated bug detection completed.\n\n';
+            comment += 'Check the Actions tab for detailed results.';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
