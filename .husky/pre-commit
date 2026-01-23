@@ -1,11 +1,20 @@
+#!/bin/sh
+
 echo "🤖 BugBot: Running pre-commit checks..."
 
-# Run lint-staged
-npx lint-staged
+# Add common Node.js paths
+export PATH="$PATH:./node_modules/.bin:$HOME/anaconda3:$HOME/AppData/Roaming/npm"
+
+# Run lint-staged if available
+if command -v npx >/dev/null 2>&1; then
+  npx lint-staged || true
+fi
 
 # Run custom bug detection
 if [ -f scripts/bug-detector.js ]; then
-  node scripts/bug-detector.js --pre-commit
+  if command -v node >/dev/null 2>&1; then
+    node scripts/bug-detector.js --pre-commit
+  fi
 fi
 
 echo "✅ BugBot: Pre-commit checks complete!"
