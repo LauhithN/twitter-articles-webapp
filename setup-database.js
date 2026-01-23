@@ -1,7 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
+import 'dotenv/config'
 
-const supabaseUrl = 'https://pcznamduramewdupeqbx.supabase.co'
-const supabaseServiceKey = 'REMOVED_LEAKED_KEY'
+// Load from environment variables - NEVER hardcode credentials!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing environment variables!')
+  console.error('Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY in .env.local')
+  process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 

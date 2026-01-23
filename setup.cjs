@@ -1,7 +1,15 @@
 const { createClient } = require('@supabase/supabase-js')
+require('dotenv').config({ path: '.env.local' })
 
-const supabaseUrl = 'https://pcznamduramewdupeqbx.supabase.co'
-const supabaseServiceKey = 'REMOVED_LEAKED_KEY'
+// Load from environment variables - NEVER hardcode credentials!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing environment variables!')
+  console.error('Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY in .env.local')
+  process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -82,7 +90,7 @@ async function setup() {
       } else if (error.code === '42P01') {
         console.error(`❌ Table 'articles' does not exist yet!`)
         console.log('\n📋 Please create tables first:')
-        console.log('   1. Go to https://pcznamduramewdupeqbx.supabase.co')
+        console.log('   1. Go to your Supabase dashboard')
         console.log('   2. Click "SQL Editor" → "New query"')
         console.log('   3. Copy contents of setup-db.sql')
         console.log('   4. Paste and click "Run"\n')
