@@ -1,11 +1,11 @@
-import { Header } from '@/components/Header'
-import { ArticleGrid } from '@/components/ArticleGrid'
-import { getArticles, getLastUpdatedTime } from '@/lib/supabase'
-import { Article } from '@/lib/types'
+import { Header } from '@/components/Header';
+import { ArticleGrid, SimpleArticleGrid } from '@/components/ArticleGrid';
+import { getArticles, getLastUpdatedTime } from '@/lib/supabase';
+import { Article } from '@/lib/types';
 
-export const revalidate = 300 // ISR: revalidate every 5 minutes
+export const revalidate = 300; // ISR: revalidate every 5 minutes
 
-// Top viral X articles (last 7 days)
+// Top viral X articles (last 7 days) - Demo data
 const DEMO_ARTICLES: Article[] = [
   {
     id: '1',
@@ -67,7 +67,7 @@ const DEMO_ARTICLES: Article[] = [
   {
     id: '4',
     url: 'https://x.com/IterIntellectus/status/2009707510362472735',
-    title: 'AI just solved biology\'s biggest limitation',
+    title: "AI just solved biology's biggest limitation",
     domain: 'x.com',
     tweet_count: 2800,
     likes: 78000,
@@ -83,7 +83,45 @@ const DEMO_ARTICLES: Article[] = [
     preview_image: null,
     description: null,
   },
-]
+  {
+    id: '9',
+    url: 'https://x.com/naval/status/2013111111111111111',
+    title: 'The art of wealth creation without selling your soul',
+    domain: 'x.com',
+    tweet_count: 5200,
+    likes: 198000,
+    retweets: 45000,
+    impressions: 28000000,
+    bookmarks: 72000,
+    shares: 18000,
+    author_name: 'Naval',
+    author_username: 'naval',
+    author_url: 'https://x.com/naval',
+    first_seen_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    last_updated_at: new Date(Date.now() - 5400000).toISOString(),
+    preview_image: null,
+    description: null,
+  },
+  {
+    id: '10',
+    url: 'https://x.com/SahilBloom/status/2013222222222222222',
+    title: 'The 10 mental models that changed my life',
+    domain: 'x.com',
+    tweet_count: 4100,
+    likes: 145000,
+    retweets: 32000,
+    impressions: 25000000,
+    bookmarks: 58000,
+    shares: 14000,
+    author_name: 'Sahil Bloom',
+    author_username: 'SahilBloom',
+    author_url: 'https://x.com/SahilBloom',
+    first_seen_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+    last_updated_at: new Date(Date.now() - 3600000).toISOString(),
+    preview_image: null,
+    description: null,
+  },
+];
 
 // Honourable mentions
 const HONOURABLE_MENTIONS: Article[] = [
@@ -163,49 +201,53 @@ const HONOURABLE_MENTIONS: Article[] = [
     preview_image: null,
     description: null,
   },
-]
+];
 
 export default async function Home() {
-  let articles: Article[] = []
-  let lastUpdated: string | null = null
+  let articles: Article[] = [];
+  let lastUpdated: string | null = null;
 
   // Try to fetch from Supabase, fall back to demo data
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://your-project.supabase.co') {
     try {
-      articles = await getArticles(50)
-      lastUpdated = await getLastUpdatedTime()
+      articles = await getArticles(50);
+      lastUpdated = await getLastUpdatedTime();
 
       // If no articles from Supabase, use demo data
       if (!articles || articles.length === 0) {
-        articles = DEMO_ARTICLES
-        lastUpdated = new Date().toISOString()
+        articles = DEMO_ARTICLES;
+        lastUpdated = new Date().toISOString();
       }
     } catch (error) {
-      console.error('Failed to fetch from Supabase:', error)
-      articles = DEMO_ARTICLES
-      lastUpdated = new Date().toISOString()
+      console.error('Failed to fetch from Supabase:', error);
+      articles = DEMO_ARTICLES;
+      lastUpdated = new Date().toISOString();
     }
   } else {
     // Use demo data when Supabase is not configured
-    articles = DEMO_ARTICLES
-    lastUpdated = new Date().toISOString()
+    articles = DEMO_ARTICLES;
+    lastUpdated = new Date().toISOString();
   }
 
   return (
     <>
       <Header lastUpdated={lastUpdated} />
-      <ArticleGrid articles={articles} />
+      <ArticleGrid articles={articles} showHero={true} />
 
       {/* Honourable Mentions Section */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-bold text-black border-b-2 border-black pb-2 mb-6">
-          Honourable Mentions
-        </h2>
-        <ArticleGrid articles={HONOURABLE_MENTIONS} />
+      <section className="mt-16">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex-1 h-px bg-border-subtle" />
+          <h2 className="text-headline font-bold text-text-primary uppercase tracking-wider">
+            Honourable Mentions
+          </h2>
+          <div className="flex-1 h-px bg-border-subtle" />
+        </div>
+        <SimpleArticleGrid articles={HONOURABLE_MENTIONS} />
       </section>
     </>
-  )
+  );
 }

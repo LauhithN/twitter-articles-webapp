@@ -1,18 +1,22 @@
-// Standard article card - Server Component (no 'use client' needed!)
+// Featured treatment for #2-3 articles - Server Component
 
 import { Article } from '@/lib/types';
 import { AuthorAvatar } from './AuthorAvatar';
-import { ViralityDot } from './ViralityBadge';
+import { ViralityBadge } from './ViralityBadge';
 import { MetricRow } from './MetricPill';
 import { ExternalLinkIcon } from './Icons';
 
-interface ArticleCardProps {
+interface FeaturedArticleCardProps {
   article: Article;
-  rank?: number;
+  rank: number;
   animationDelay?: number;
 }
 
-export function ArticleCard({ article, rank, animationDelay = 0 }: ArticleCardProps) {
+export function FeaturedArticleCard({
+  article,
+  rank,
+  animationDelay = 0,
+}: FeaturedArticleCardProps) {
   const staggerClass = `stagger-${Math.min(animationDelay + 1, 8)}`;
 
   return (
@@ -21,52 +25,51 @@ export function ArticleCard({ article, rank, animationDelay = 0 }: ArticleCardPr
       target="_blank"
       rel="noopener noreferrer"
       className={`
-        group relative flex flex-col
+        group relative flex flex-col overflow-hidden
         bg-surface-1
-        border border-border-subtle hover:border-border-default
-        overflow-hidden
+        border border-border-subtle hover:border-border-emphasis
         transition-all duration-200
         hover:translate-y-[-2px]
         hover:shadow-card-hover
         animate-card-enter ${staggerClass}
       `}
     >
-      {/* Content */}
-      <div className="flex-1 p-4 space-y-3">
-        {/* Top row: Rank + Virality + Author */}
+      {/* Top section with rank and badge */}
+      <div className="flex items-center justify-between p-4 pb-0">
         <div className="flex items-center gap-3">
-          {rank && (
-            <div
-              className="
-              w-7 h-7
-              bg-surface-2 border border-border-subtle
-              flex items-center justify-center
-              font-mono text-caption text-text-muted
-              flex-shrink-0
-            "
-            >
-              {rank}
-            </div>
-          )}
+          <div
+            className="
+            w-10 h-10
+            bg-surface-2 border border-border-default
+            flex items-center justify-center
+            font-mono text-title text-text-secondary
+          "
+          >
+            #{rank}
+          </div>
+          <ViralityBadge impressions={article.impressions} />
+        </div>
+      </div>
 
-          <ViralityDot impressions={article.impressions} />
-
-          <AuthorAvatar name={article.author_name} username={article.author_username} size="sm" />
-
+      {/* Content */}
+      <div className="flex-1 p-4 pt-3 space-y-3">
+        {/* Author row */}
+        <div className="flex items-center gap-3">
+          <AuthorAvatar name={article.author_name} username={article.author_username} size="md" />
           <div className="min-w-0 flex-1">
-            <div className="text-meta font-medium text-text-primary truncate">
+            <div className="text-body font-medium text-text-primary truncate">
               {article.author_name}
             </div>
-            <div className="text-caption text-text-muted truncate">@{article.author_username}</div>
+            <div className="text-caption text-text-muted">@{article.author_username}</div>
           </div>
         </div>
 
         {/* Title */}
-        <h2 className="text-title text-text-primary line-clamp-2 group-hover:text-accent transition-colors leading-snug">
+        <h2 className="text-title text-text-primary line-clamp-2 group-hover:text-accent transition-colors">
           {article.title}
         </h2>
 
-        {/* Domain tag */}
+        {/* Domain */}
         {article.domain && article.domain !== 'x.com' && (
           <span
             className="
@@ -94,13 +97,14 @@ export function ArticleCard({ article, rank, animationDelay = 0 }: ArticleCardPr
           likes={article.likes}
           retweets={article.retweets}
           impressions={article.impressions}
-          size="sm"
+          size="md"
         />
 
-        {/* External link indicator on hover */}
+        {/* Read indicator */}
         <div
           className="
-          text-text-muted
+          flex items-center gap-1
+          text-text-muted text-caption
           opacity-0 group-hover:opacity-100
           transform translate-x-0 group-hover:translate-x-1
           transition-all duration-150

@@ -17,7 +17,13 @@
       "WebFetch(domain:gist.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(# Test xcancel.com with redirect follow echo \"\"Testing xcancel.com with redirect follow:\"\" curl -sL --max-time 15 \"\"https://xcancel.com/naval/rss\"\")",
-      "Bash(# Verify nitter.privacyredirect.com returns valid RSS echo \"\"=== Testing nitter.privacyredirect.com ===\"\" curl -sL --max-time 15 \"\"https://nitter.privacyredirect.com/naval/rss\"\")"
+      "Bash(# Verify nitter.privacyredirect.com returns valid RSS echo \"\"=== Testing nitter.privacyredirect.com ===\"\" curl -sL --max-time 15 \"\"https://nitter.privacyredirect.com/naval/rss\"\")",
+      "Bash(gh workflow run:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx next build)",
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 5 tail:*)"
     ]
   }
 }

@@ -1,33 +1,34 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
+import { useState } from 'react';
+import { RefreshIcon } from './Icons';
 
 export function RefreshButton() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   async function handleRefresh() {
-    setIsLoading(true)
-    setMessage(null)
+    setIsLoading(true);
+    setMessage(null);
 
     try {
-      const response = await fetch('/api/refresh', { method: 'POST' })
+      const response = await fetch('/api/refresh', { method: 'POST' });
 
       if (response.ok) {
-        setMessage('Refresh queued')
-        setTimeout(() => setMessage(null), 3000)
+        setMessage('Refresh queued');
+        setTimeout(() => setMessage(null), 3000);
       } else if (response.status === 429) {
-        setMessage('Rate limited')
-        setTimeout(() => setMessage(null), 3000)
+        setMessage('Rate limited');
+        setTimeout(() => setMessage(null), 3000);
       } else {
-        setMessage('Error')
-        setTimeout(() => setMessage(null), 3000)
+        setMessage('Error');
+        setTimeout(() => setMessage(null), 3000);
       }
     } catch {
-      setMessage('Error')
-      setTimeout(() => setMessage(null), 3000)
+      setMessage('Error');
+      setTimeout(() => setMessage(null), 3000);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -36,13 +37,35 @@ export function RefreshButton() {
       <button
         onClick={handleRefresh}
         disabled={isLoading}
-        className="border-2 border-black px-3 py-1 text-meta font-mono hover:bg-black hover:text-white transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="
+          group relative
+          flex items-center gap-2
+          bg-surface-1 border border-border-default
+          px-4 py-2
+          text-meta font-mono uppercase tracking-wide
+          text-text-secondary
+          hover:bg-surface-2 hover:border-accent hover:text-accent
+          transition-all duration-150
+          disabled:opacity-50 disabled:cursor-not-allowed
+        "
       >
-        {isLoading ? 'LOADING...' : 'REFRESH'}
+        <RefreshIcon
+          className={`w-4 h-4 transition-transform duration-300 ${
+            isLoading ? 'animate-spin' : 'group-hover:rotate-180'
+          }`}
+        />
+        <span>{isLoading ? 'LOADING' : 'REFRESH'}</span>
       </button>
       {message && (
-        <span className="text-meta text-accent font-mono">{message}</span>
+        <span
+          className={`
+            text-meta font-mono
+            ${message === 'Refresh queued' ? 'text-viral-rising' : 'text-viral-hot'}
+          `}
+        >
+          {message}
+        </span>
       )}
     </div>
-  )
+  );
 }
