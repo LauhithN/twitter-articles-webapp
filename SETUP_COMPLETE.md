@@ -50,7 +50,7 @@ Each article card now displays:
 ### To Add Real Data from Supabase:
 
 1. **Open Supabase SQL Editor:**
-   - Go to https://pcznamduramewdupeqbx.supabase.co
+   - Go to https://your-project.supabase.co
    - Click **SQL Editor** → **New query**
 
 2. **Copy & Run setup-db.sql:**
@@ -143,7 +143,7 @@ articles {
 
 - **App:** http://localhost:3000
 - **GitHub:** https://github.com/LauhithN/twitter-articles-webapp
-- **Supabase:** https://pcznamduramewdupeqbx.supabase.co
+- **Supabase:** https://your-project.supabase.co
 
 ---
 

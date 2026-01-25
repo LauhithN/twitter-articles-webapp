@@ -25,7 +25,7 @@ Edit `mcp-config.json` and replace `YOUR_SERVICE_ROLE_KEY_HERE` with your actual
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-supabase"],
       "env": {
-        "SUPABASE_URL": "https://pcznamduramewdupeqbx.supabase.co",
+        "SUPABASE_URL": "https://your-project.supabase.co",
         "SUPABASE_SERVICE_ROLE_KEY": "your-service-role-key-here"
       }
     }
@@ -50,7 +50,7 @@ Or manually add to `~/.config/claude/mcp-servers.json`:
     "command": "npx",
     "args": ["-y", "@modelcontextprotocol/server-supabase"],
     "env": {
-      "SUPABASE_URL": "https://pcznamduramewdupeqbx.supabase.co",
+      "SUPABASE_URL": "https://your-project.supabase.co",
       "SUPABASE_SERVICE_ROLE_KEY": "your-service-role-key"
     }
   }
@@ -107,7 +107,7 @@ Instead of hardcoding in the config file, use environment variables:
 Then export these in your shell:
 
 ```bash
-export SUPABASE_URL="https://pcznamduramewdupeqbx.supabase.co"
+export SUPABASE_URL="https://your-project.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 ```
 

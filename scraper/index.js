@@ -10,15 +10,18 @@ const parser = new Parser({
 })
 
 // Initialize Supabase client
+// IMPORTANT: Load from environment variables - NEVER hardcode credentials!
+// This must be the SERVICE ROLE key (not anon key) for write operations
 const supabaseUrl = process.env.SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing SUPABASE_URL or SUPABASE_KEY environment variables')
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables')
+  console.error('Note: SUPABASE_SERVICE_KEY must be the service role key, not the anon key')
   process.exit(1)
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Check if running in dry-run mode
 const isDryRun = process.argv.includes('--dry-run')
@@ -72,14 +75,26 @@ function extractTitle(text, maxLength = 100) {
   return (lastSpace > 50 ? truncated.slice(0, lastSpace) : truncated) + '...'
 }
 
-async function fetchFeed(feedUrl) {
-  try {
-    const feed = await parser.parseURL(feedUrl)
-    return feed.items || []
-  } catch (error) {
-    console.error(`Failed to fetch feed ${feedUrl}:`, error.message)
-    return []
+async function fetchFeed(feedUrl, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const feed = await parser.parseURL(feedUrl)
+      return feed.items || []
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries
+      const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000)
+
+      console.error(`Attempt ${attempt}/${maxRetries} failed for ${feedUrl}: ${error.message}`)
+
+      if (isLastAttempt) {
+        console.error(`All retries exhausted for ${feedUrl}`)
+        return []
+      }
+
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
   }
+  return []
 }
 
 // Extract article data from RSS item
@@ -121,61 +136,75 @@ function extractArticleFromItem(item, authorUsername) {
 async function upsertArticle(article) {
   const { url, title, domain, authorUsername, authorName, authorUrl, description, pubDate, tweetId } = article
 
-  // First, try to get existing article
-  const { data: existing } = await supabase
-    .from('articles')
-    .select('id, tweet_count')
-    .eq('url', url)
-    .single()
-
-  if (existing) {
-    // Update existing article
-    const { error } = await supabase
-      .from('articles')
-      .update({
-        last_updated_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id)
-
-    if (error) {
-      console.error(`Failed to update article ${url}:`, error.message)
-    } else {
-      console.log(`Updated: ${title.slice(0, 50)}...`)
-    }
-
-  } else {
-    // Insert new article
-    const { error } = await supabase
-      .from('articles')
-      .insert({
-        url,
-        domain,
-        title: title.slice(0, 500),
-        tweet_count: 1,
-        description: description || null,
-        author_name: authorName,
-        author_username: authorUsername,
-        author_url: authorUrl,
-        // These would need to be fetched from Twitter API for real data
-        likes: 0,
-        retweets: 0,
-        impressions: 0,
-        bookmarks: 0,
-        shares: 0,
-      })
-
-    if (error) {
-      console.error(`Failed to insert article ${url}:`, error.message)
-    } else {
-      console.log(`New article: ${title.slice(0, 50)}...`)
-    }
+  // Validate required fields
+  if (!url || !title || !authorUsername) {
+    console.error(`Invalid article data: missing required fields`)
+    return null
   }
+
+  // Validate URL format
+  try {
+    new URL(url)
+  } catch {
+    console.error(`Invalid URL format: ${url}`)
+    return null
+  }
+
+  // Use upsert with ON CONFLICT to handle race conditions atomically
+  const { data, error } = await supabase
+    .from('articles')
+    .upsert({
+      url,
+      domain,
+      title: title.slice(0, 500),
+      tweet_count: 1,
+      description: description ? description.slice(0, 5000) : null,
+      author_name: authorName,
+      author_username: authorUsername,
+      author_url: authorUrl,
+      last_updated_at: new Date().toISOString(),
+      // These would need to be fetched from Twitter API for real data
+      likes: 0,
+      retweets: 0,
+      impressions: 0,
+      bookmarks: 0,
+      shares: 0,
+    }, {
+      onConflict: 'url',
+      ignoreDuplicates: false
+    })
+    .select()
+
+  if (error) {
+    console.error(`Failed to upsert article ${url}:`, error.message)
+    return null
+  }
+
+  console.log(`Upserted: ${title.slice(0, 50)}...`)
+  return data
 }
 
 async function cleanOldArticles() {
   // Remove articles older than 7 days
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - 7)
+
+  // First count what will be deleted (safety check)
+  const { count, error: countError } = await supabase
+    .from('articles')
+    .select('*', { count: 'exact', head: true })
+    .lt('first_seen_at', cutoff.toISOString())
+
+  if (countError) {
+    console.error('Failed to count old articles:', countError.message)
+    return
+  }
+
+  // Safety check: don't delete if unusually high count
+  if (count > 1000) {
+    console.warn(`Unusually high deletion count (${count}), skipping cleanup for safety`)
+    return
+  }
 
   const { error } = await supabase
     .from('articles')
@@ -185,7 +214,7 @@ async function cleanOldArticles() {
   if (error) {
     console.error('Failed to clean old articles:', error.message)
   } else {
-    console.log('Cleaned up old articles')
+    console.log(`Cleaned up ${count} old articles`)
   }
 }
 

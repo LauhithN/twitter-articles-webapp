@@ -45,20 +45,34 @@ export function getAccountFeedUrls(instance) {
   return ARTICLE_AUTHORS.map(account => `${instance}/${account}/rss`)
 }
 
-// Get a working Nitter instance (tries multiple)
+// Get a working Nitter instance (tries multiple with actual RSS verification)
 export async function getWorkingInstance() {
-  for (const instance of NITTER_INSTANCES) {
+  // Shuffle instances for load balancing
+  const shuffled = [...NITTER_INSTANCES].sort(() => Math.random() - 0.5)
+
+  for (const instance of shuffled) {
     try {
-      const response = await fetch(instance, {
-        method: 'HEAD',
-        signal: AbortSignal.timeout(5000)
+      // Test with an actual RSS endpoint (more reliable than just HEAD request)
+      const testUrl = `${instance}/${ARTICLE_AUTHORS[0]}/rss`
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000),
+        headers: { 'User-Agent': 'TwitterArticlesScraper/1.0' }
       })
+
       if (response.ok) {
-        return instance
+        const contentType = response.headers.get('content-type') || ''
+        if (contentType.includes('xml') || contentType.includes('rss')) {
+          console.log(`Verified working instance: ${instance}`)
+          return instance
+        }
       }
     } catch {
       console.log(`Instance ${instance} is not available`)
     }
   }
-  throw new Error('No working Nitter instance found')
+
+  // Fallback to first instance instead of crashing - let individual feeds fail gracefully
+  console.warn('No verified working Nitter instance found, using first as fallback')
+  return NITTER_INSTANCES[0]
 }
