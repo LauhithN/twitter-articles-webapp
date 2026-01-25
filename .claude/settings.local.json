@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /a \"C:\\\\Users\\\\Lastheboss\\\\OneDrive\\\\Desktop\\\\twitter-articles-webapp\\\\scraper\")",
+      "Bash(tree:*)",
+      "Bash(xargs:*)",
+      "Bash(git rev-list:*)",
+      "Bash(npm install:*)",
+      "Bash(node --check:*)",
+      "Bash(npm test:*)",
+      "Bash(SUPABASE_URL=\"https://test.supabase.co\" SUPABASE_SERVICE_KEY=\"dummy\" node:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:status.d420.de)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(# Test xcancel.com with redirect follow echo \"\"Testing xcancel.com with redirect follow:\"\" curl -sL --max-time 15 \"\"https://xcancel.com/naval/rss\"\")",
+      "Bash(# Verify nitter.privacyredirect.com returns valid RSS echo \"\"=== Testing nitter.privacyredirect.com ===\"\" curl -sL --max-time 15 \"\"https://nitter.privacyredirect.com/naval/rss\"\")"
+    ]
+  }
+}
