@@ -1,112 +1,74 @@
-// Standard article card - Server Component (no 'use client' needed!)
+// Minimal glass article card - Server Component
 
 import { Article } from '@/lib/types';
-import { AuthorAvatar } from './AuthorAvatar';
-import { ViralityDot } from './ViralityBadge';
-import { MetricRow } from './MetricPill';
-import { ExternalLinkIcon } from './Icons';
+import { formatNumber } from '@/lib/utils';
+import { HeartIcon, RetweetIcon, ChartIcon } from './Icons';
 
 interface ArticleCardProps {
   article: Article;
-  rank?: number;
-  animationDelay?: number;
 }
 
-export function ArticleCard({ article, rank, animationDelay = 0 }: ArticleCardProps) {
-  const staggerClass = `stagger-${Math.min(animationDelay + 1, 8)}`;
-
+export function ArticleCard({ article }: ArticleCardProps) {
   return (
     <a
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`
-        group relative flex flex-col
-        bg-surface-1
-        border border-border-subtle hover:border-border-default
-        overflow-hidden
-        transition-all duration-200
-        hover:translate-y-[-2px]
-        hover:shadow-card-hover
-        animate-card-enter ${staggerClass}
-      `}
+      className="
+        group relative block
+        rounded-2xl
+        glass-highlight
+        p-5
+        transition-glass
+        hover:-translate-y-0.5
+        hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)]
+      "
     >
-      {/* Content */}
-      <div className="flex-1 p-4 space-y-3">
-        {/* Top row: Rank + Virality + Author */}
-        <div className="flex items-center gap-3">
-          {rank && (
-            <div
-              className="
-              w-7 h-7
-              bg-surface-2 border border-border-subtle
-              flex items-center justify-center
-              font-mono text-caption text-text-muted
-              flex-shrink-0
-            "
-            >
-              {rank}
-            </div>
-          )}
-
-          <ViralityDot impressions={article.impressions} />
-
-          <AuthorAvatar name={article.author_name} username={article.author_username} size="sm" />
-
-          <div className="min-w-0 flex-1">
-            <div className="text-meta font-medium text-text-primary truncate">
-              {article.author_name}
-            </div>
-            <div className="text-caption text-text-muted truncate">@{article.author_username}</div>
-          </div>
+      {/* Author */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-white/70">
+          {article.author_name?.charAt(0) || 'A'}
         </div>
-
-        {/* Title */}
-        <h2 className="text-title text-text-primary line-clamp-2 group-hover:text-accent transition-colors leading-snug">
-          {article.title}
-        </h2>
-
-        {/* Domain tag */}
-        {article.domain && article.domain !== 'x.com' && (
-          <span
-            className="
-            inline-block px-2 py-0.5
-            bg-surface-2 border border-border-subtle
-            text-label text-text-muted uppercase tracking-wider
-            font-mono
-          "
-          >
-            {article.domain}
-          </span>
-        )}
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-white/60">{article.author_name}</span>
+          <span className="text-white/40">·</span>
+          <span className="text-white/40">@{article.author_username}</span>
+        </div>
       </div>
 
-      {/* Metrics bar - bottom edge */}
-      <div
-        className="
-        flex items-center justify-between
-        px-4 py-3
-        bg-surface-2
-        border-t border-border-subtle
-      "
-      >
-        <MetricRow
-          likes={article.likes}
-          retweets={article.retweets}
-          impressions={article.impressions}
-          size="sm"
-        />
+      {/* Title */}
+      <h2 className="text-lg font-medium text-white/90 leading-snug mb-4 line-clamp-2">
+        {article.title}
+      </h2>
 
-        {/* External link indicator on hover */}
-        <div
-          className="
-          text-text-muted
-          opacity-0 group-hover:opacity-100
-          transform translate-x-0 group-hover:translate-x-1
-          transition-all duration-150
-        "
-        >
-          <ExternalLinkIcon className="w-3.5 h-3.5" />
+      {/* Domain badge */}
+      {article.domain && article.domain !== 'x.com' && (
+        <div className="mb-4">
+          <span className="inline-block px-2.5 py-1 rounded-lg glass text-xs text-white/50">
+            {article.domain}
+          </span>
+        </div>
+      )}
+
+      {/* Metrics */}
+      <div className="flex items-center gap-5 text-sm">
+        <div className="flex items-center gap-1.5">
+          <HeartIcon className="w-4 h-4 text-white/40" />
+          <span className="text-emerald-400 font-medium tabular-nums">
+            {formatNumber(article.likes)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <RetweetIcon className="w-4 h-4 text-white/40" />
+          <span className="text-sky-400 font-medium tabular-nums">
+            {formatNumber(article.retweets)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <ChartIcon className="w-4 h-4 text-white/40" />
+          <span className="text-white/60 font-medium tabular-nums">
+            {formatNumber(article.impressions)}
+          </span>
         </div>
       </div>
     </a>

@@ -1,11 +1,11 @@
 import { Header } from '@/components/Header';
-import { ArticleGrid, SimpleArticleGrid } from '@/components/ArticleGrid';
+import { ArticleGrid } from '@/components/ArticleGrid';
 import { getArticles, getLastUpdatedTime } from '@/lib/supabase';
 import { Article } from '@/lib/types';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
-// Top viral X articles (last 7 days) - Demo data
+// Demo data
 const DEMO_ARTICLES: Article[] = [
   {
     id: '1',
@@ -84,7 +84,7 @@ const DEMO_ARTICLES: Article[] = [
     description: null,
   },
   {
-    id: '9',
+    id: '5',
     url: 'https://x.com/naval/status/2013111111111111111',
     title: 'The art of wealth creation without selling your soul',
     domain: 'x.com',
@@ -103,7 +103,7 @@ const DEMO_ARTICLES: Article[] = [
     description: null,
   },
   {
-    id: '10',
+    id: '6',
     url: 'https://x.com/SahilBloom/status/2013222222222222222',
     title: 'The 10 mental models that changed my life',
     domain: 'x.com',
@@ -121,12 +121,8 @@ const DEMO_ARTICLES: Article[] = [
     preview_image: null,
     description: null,
   },
-];
-
-// Honourable mentions
-const HONOURABLE_MENTIONS: Article[] = [
   {
-    id: '5',
+    id: '7',
     url: 'https://x.com/milesdeutscher/status/2011867442105237683',
     title: 'Crypto Market Analysis',
     domain: 'x.com',
@@ -145,26 +141,7 @@ const HONOURABLE_MENTIONS: Article[] = [
     description: null,
   },
   {
-    id: '6',
-    url: 'https://x.com/thedankoe/status/2012956603297964167',
-    title: 'The Future of Content Creation',
-    domain: 'x.com',
-    tweet_count: 2100,
-    likes: 52000,
-    retweets: 14000,
-    impressions: 22000000,
-    bookmarks: 18000,
-    shares: 5000,
-    author_name: 'Dan Koe',
-    author_username: 'thedankoe',
-    author_url: 'https://x.com/thedankoe',
-    first_seen_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-    last_updated_at: new Date(Date.now() - 3600000).toISOString(),
-    preview_image: null,
-    description: null,
-  },
-  {
-    id: '7',
+    id: '8',
     url: 'https://x.com/noironsol/status/2013078582608966104',
     title: 'Building in Public',
     domain: 'x.com',
@@ -183,7 +160,7 @@ const HONOURABLE_MENTIONS: Article[] = [
     description: null,
   },
   {
-    id: '8',
+    id: '9',
     url: 'https://x.com/XCreators/status/2011957172821737574',
     title: 'X Creator Program Announcement',
     domain: 'x.com',
@@ -216,7 +193,6 @@ export default async function Home() {
       articles = await getArticles(50);
       lastUpdated = await getLastUpdatedTime();
 
-      // If no articles from Supabase, use demo data
       if (!articles || articles.length === 0) {
         articles = DEMO_ARTICLES;
         lastUpdated = new Date().toISOString();
@@ -227,7 +203,6 @@ export default async function Home() {
       lastUpdated = new Date().toISOString();
     }
   } else {
-    // Use demo data when Supabase is not configured
     articles = DEMO_ARTICLES;
     lastUpdated = new Date().toISOString();
   }
@@ -235,19 +210,7 @@ export default async function Home() {
   return (
     <>
       <Header lastUpdated={lastUpdated} />
-      <ArticleGrid articles={articles} showHero={true} />
-
-      {/* Honourable Mentions Section */}
-      <section className="mt-16">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 h-px bg-border-subtle" />
-          <h2 className="text-headline font-bold text-text-primary uppercase tracking-wider">
-            Honourable Mentions
-          </h2>
-          <div className="flex-1 h-px bg-border-subtle" />
-        </div>
-        <SimpleArticleGrid articles={HONOURABLE_MENTIONS} />
-      </section>
+      <ArticleGrid articles={articles} />
     </>
   );
 }
