@@ -17,8 +17,28 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Viral Articles',
-  description: 'Most shared articles on X, updated hourly',
+  title: "Viral Articles – Discover What's Trending on X",
+  description:
+    'Discover the most viral articles being shared on X (Twitter) right now. Updated hourly with engagement metrics, author insights, and trending topics.',
+  metadataBase: new URL('https://viralarticles.app'),
+  openGraph: {
+    title: "Viral Articles – Discover What's Trending on X",
+    description:
+      'Discover the most viral articles being shared on X (Twitter) right now. Updated hourly with engagement metrics and trending topics.',
+    url: 'https://viralarticles.app',
+    siteName: 'Viral Articles',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Viral Articles – Discover What's Trending on X",
+    description: 'Discover the most viral articles being shared on X right now. Updated hourly.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
