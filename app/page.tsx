@@ -1,4 +1,5 @@
 import { Header } from '@/components/Header';
+import { WaitlistCTA } from '@/components/WaitlistCTA';
 import { ArticleGrid } from '@/components/ArticleGrid';
 import { getArticles, getLastUpdatedTime } from '@/lib/supabase';
 import { Article } from '@/lib/types';
@@ -210,6 +211,7 @@ export default async function Home() {
   return (
     <>
       <Header lastUpdated={lastUpdated} />
+      <WaitlistCTA />
       <ArticleGrid articles={articles} />
     </>
   );
