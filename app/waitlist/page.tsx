@@ -1,6 +1,49 @@
+'use client';
+
+import { useState, FormEvent } from 'react';
 import { SparklesIcon } from '@/components/Icons';
 
 export default function WaitlistPage() {
+  const [email, setEmail] = useState('');
+  const [twitterHandle, setTwitterHandle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          twitter_handle: twitterHandle.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to join waitlist');
+        return;
+      }
+
+      setSuccess(true);
+      setEmail('');
+      setTwitterHandle('');
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="max-w-lg w-full">
@@ -29,11 +72,32 @@ export default function WaitlistPage() {
             We&apos;ll notify you when you&apos;re in.
           </p>
 
-          {/* Placeholder for form */}
-          <div className="space-y-4">
+          {/* Success State */}
+          {success && (
+            <div className="mb-6 p-4 rounded-xl bg-emerald-400/10 border border-emerald-400/30">
+              <p className="text-emerald-400 font-medium">You&apos;re on the list!</p>
+              <p className="text-white/60 text-sm mt-1">
+                We&apos;ll notify you when you&apos;re in.
+              </p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-400/10 border border-red-400/30">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="email"
               placeholder="Enter your email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              disabled={isLoading}
               className="
                 w-full
                 px-4 py-3
@@ -45,10 +109,36 @@ export default function WaitlistPage() {
                 focus:ring-2
                 focus:ring-emerald-400/50
                 transition-all
+                disabled:opacity-50
+                disabled:cursor-not-allowed
+              "
+            />
+
+            <input
+              type="text"
+              placeholder="X handle (optional)"
+              value={twitterHandle}
+              onChange={e => setTwitterHandle(e.target.value)}
+              disabled={isLoading}
+              className="
+                w-full
+                px-4 py-3
+                rounded-xl
+                glass
+                text-white/90
+                placeholder:text-white/40
+                focus:outline-none
+                focus:ring-2
+                focus:ring-emerald-400/50
+                transition-all
+                disabled:opacity-50
+                disabled:cursor-not-allowed
               "
             />
 
             <button
+              type="submit"
+              disabled={isLoading}
               className="
                 w-full
                 px-4 py-3
@@ -60,11 +150,14 @@ export default function WaitlistPage() {
                 transition-all
                 hover:scale-[1.02]
                 active:scale-[0.98]
+                disabled:opacity-50
+                disabled:cursor-not-allowed
+                disabled:hover:scale-100
               "
             >
-              Join Waitlist
+              {isLoading ? 'Joining...' : 'Join Waitlist'}
             </button>
-          </div>
+          </form>
 
           {/* Back link */}
           <a
