@@ -5,6 +5,7 @@ import type { Article } from '@/lib/types';
 import { fetchFreshArticlesFromRss } from '@/lib/free-rss';
 import { getArticles, getLastUpdatedTime, isTimestampStale } from '@/lib/supabase';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 

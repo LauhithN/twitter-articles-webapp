@@ -133,49 +133,62 @@ function tweetToArticle(tweet: SyndicationTweet): Article | null {
 async function fetchAuthorTimeline(username: string): Promise<Article[]> {
   const url = `${SYNDICATION_TIMELINE_URL}/${username}`;
 
-  const response = await fetch(url, {
-    cache: 'no-store',
-    signal: AbortSignal.timeout(12_000),
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    },
-  });
-
-  if (!response.ok) return [];
-
-  const html = await response.text();
-
-  // Extract __NEXT_DATA__ JSON blob
-  const nextDataPattern = /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i;
-  const match = html.match(nextDataPattern);
-  if (!match || !match[1]) return [];
-
-  let pageData: SyndicationPageData;
   try {
-    pageData = JSON.parse(match[1]);
-  } catch {
+    const response = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`[free-rss] ${username}: HTTP ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const html = await response.text();
+
+    // Extract __NEXT_DATA__ JSON blob
+    const nextDataPattern = /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i;
+    const match = html.match(nextDataPattern);
+    if (!match || !match[1]) {
+      console.error(`[free-rss] ${username}: No __NEXT_DATA__ found (html length: ${html.length})`);
+      return [];
+    }
+
+    let pageData: SyndicationPageData;
+    try {
+      pageData = JSON.parse(match[1]);
+    } catch {
+      console.error(`[free-rss] ${username}: Failed to parse __NEXT_DATA__ JSON`);
+      return [];
+    }
+
+    const entries = pageData?.props?.pageProps?.timeline?.entries ?? [];
+    const articles: Article[] = [];
+
+    for (const entry of entries) {
+      if (entry.type !== 'tweet') continue;
+
+      const tweet = entry.content?.tweet;
+      if (!tweet) continue;
+
+      // Skip replies to other users
+      if (tweet.in_reply_to_status_id_str) continue;
+
+      const article = tweetToArticle(tweet);
+      if (article) articles.push(article);
+    }
+
+    console.log(`[free-rss] ${username}: fetched ${articles.length} tweets`);
+    return articles;
+  } catch (err) {
+    console.error(`[free-rss] ${username}: ${err instanceof Error ? err.message : String(err)}`);
     return [];
   }
-
-  const entries = pageData?.props?.pageProps?.timeline?.entries ?? [];
-  const articles: Article[] = [];
-
-  for (const entry of entries) {
-    if (entry.type !== 'tweet') continue;
-
-    const tweet = entry.content?.tweet;
-    if (!tweet) continue;
-
-    // Skip replies to other users
-    if (tweet.in_reply_to_status_id_str) continue;
-
-    const article = tweetToArticle(tweet);
-    if (article) articles.push(article);
-  }
-
-  return articles;
 }
 
 // ─── Main export ─────────────────────────────────────────────────────
