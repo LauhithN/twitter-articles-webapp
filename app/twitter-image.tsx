@@ -110,7 +110,7 @@ export default async function Image() {
             maxWidth: '800px',
           }}
         >
-          Discover the most shared content on X, updated hourly
+          Discover the most shared content on X, refreshed frequently
         </p>
 
         {/* Stats badges */}

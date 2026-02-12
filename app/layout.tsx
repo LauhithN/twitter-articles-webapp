@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import { Sidebar } from '@/components/Sidebar';
 import { BackgroundOrbs } from '@/components/BackgroundOrbs';
@@ -17,14 +18,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Viral Articles – Discover What's Trending on X",
+  title: "Viral Articles - Discover What's Trending on X",
   description:
-    'Discover the most viral articles being shared on X (Twitter) right now. Updated hourly with engagement metrics, author insights, and trending topics.',
+    'Discover the most viral articles being shared on X (Twitter) right now. Refreshed frequently with engagement metrics, author insights, and trending topics.',
   metadataBase: new URL('https://viralarticles.app'),
   openGraph: {
-    title: "Viral Articles – Discover What's Trending on X",
+    title: "Viral Articles - Discover What's Trending on X",
     description:
-      'Discover the most viral articles being shared on X (Twitter) right now. Updated hourly with engagement metrics and trending topics.',
+      'Discover the most viral articles being shared on X (Twitter) right now. Refreshed frequently with engagement metrics and trending topics.',
     url: 'https://viralarticles.app',
     siteName: 'Viral Articles',
     locale: 'en_US',
@@ -32,8 +33,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Viral Articles – Discover What's Trending on X",
-    description: 'Discover the most viral articles being shared on X right now. Updated hourly.',
+    title: "Viral Articles - Discover What's Trending on X",
+    description:
+      'Discover the most viral articles being shared on X right now. Refreshed frequently.',
   },
   robots: {
     index: true,
@@ -50,7 +52,9 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="font-sans">
         <BackgroundOrbs />
-        <Sidebar />
+        <Suspense fallback={null}>
+          <Sidebar />
+        </Suspense>
 
         <main className="min-h-screen px-6 py-12 lg:pl-32 relative z-10">
           <div className="max-w-7xl mx-auto">{children}</div>

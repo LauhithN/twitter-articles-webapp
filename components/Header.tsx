@@ -13,7 +13,7 @@ export function Header({ lastUpdated }: HeaderProps) {
           <h1 className="text-3xl font-semibold tracking-tight text-white/90 mb-2">
             Viral Articles
           </h1>
-          <p className="text-sm text-white/50">Most shared on X, updated hourly</p>
+          <p className="text-sm text-white/50">Most shared on X, refreshed from free feeds</p>
         </div>
 
         <div className="flex items-center gap-3">
