@@ -48,6 +48,24 @@ export function RetweetIcon({ className = 'w-4 h-4' }: IconProps) {
   );
 }
 
+export function ReplyIcon({ className = 'w-4 h-4' }: IconProps) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7.5 8.25h9M7.5 12h6m-6 0v4.5l-3.75-3.75H3a.75.75 0 01-.75-.75V5.25c0-.414.336-.75.75-.75h18c.414 0 .75.336.75.75v11.25a.75.75 0 01-.75.75H9"
+      />
+    </svg>
+  );
+}
+
 export function ChartIcon({ className = 'w-4 h-4' }: IconProps) {
   return (
     <svg

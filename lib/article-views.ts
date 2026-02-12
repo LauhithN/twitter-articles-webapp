@@ -1,4 +1,5 @@
 import type { Article } from './types';
+import { getTotalEngagement, getWeightedEngagement } from './engagement';
 
 export type SidebarView = 'trending' | 'rising' | 'saved' | 'analytics';
 
@@ -8,12 +9,13 @@ const VALID_VIEWS: SidebarView[] = ['trending', 'rising', 'saved', 'analytics'];
 
 export interface AnalyticsSummary {
   totalArticles: number;
+  totalEngagements: number;
   totalLikes: number;
   totalRetweets: number;
+  totalReplies: number;
   totalImpressions: number;
   totalBookmarks: number;
   totalShares: number;
-  topAuthor: string;
 }
 
 export function parseSidebarView(view: string | null | undefined): SidebarView {
@@ -46,19 +48,11 @@ function getAgeHours(article: Article): number {
 }
 
 function getRawEngagement(article: Article): number {
-  return (
-    article.likes * 1 +
-    article.retweets * 2 +
-    article.bookmarks * 3 +
-    article.shares * 3 +
-    article.tweet_count * 20 +
-    article.impressions / 1_000
-  );
+  return getWeightedEngagement(article);
 }
 
 export function getTrendingScore(article: Article): number {
-  const recencyBoost = Math.max(0, 72 - getAgeHours(article)) * 5;
-  return getRawEngagement(article) + recencyBoost;
+  return getRawEngagement(article);
 }
 
 export function getRisingScore(article: Article): number {
@@ -98,44 +92,34 @@ export function sortArticlesForView(
 export function summarizeAnalytics(articles: Article[]): AnalyticsSummary {
   const totals = articles.reduce(
     (acc, article) => {
+      acc.totalEngagements += getTotalEngagement(article);
       acc.totalLikes += article.likes;
       acc.totalRetweets += article.retweets;
+      acc.totalReplies += article.replies;
       acc.totalImpressions += article.impressions;
       acc.totalBookmarks += article.bookmarks;
       acc.totalShares += article.shares;
-      const author = article.author_name || article.author_username || 'Unknown';
-      const authorEngagement =
-        article.likes + article.retweets * 2 + article.bookmarks * 3 + article.shares * 3;
-      acc.authorScores.set(author, (acc.authorScores.get(author) || 0) + authorEngagement);
       return acc;
     },
     {
+      totalEngagements: 0,
       totalLikes: 0,
       totalRetweets: 0,
+      totalReplies: 0,
       totalImpressions: 0,
       totalBookmarks: 0,
       totalShares: 0,
-      authorScores: new Map<string, number>(),
     }
   );
 
-  let topAuthor = 'N/A';
-  let bestScore = -1;
-
-  totals.authorScores.forEach((score, author) => {
-    if (score > bestScore) {
-      bestScore = score;
-      topAuthor = author;
-    }
-  });
-
   return {
     totalArticles: articles.length,
+    totalEngagements: totals.totalEngagements,
     totalLikes: totals.totalLikes,
     totalRetweets: totals.totalRetweets,
+    totalReplies: totals.totalReplies,
     totalImpressions: totals.totalImpressions,
     totalBookmarks: totals.totalBookmarks,
     totalShares: totals.totalShares,
-    topAuthor,
   };
 }

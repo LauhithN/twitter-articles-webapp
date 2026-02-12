@@ -1,6 +1,7 @@
 // Featured treatment for #2-3 articles - Server Component
 
 import { Article } from '@/lib/types';
+import { isTwitterDomain } from '@/lib/article-source';
 import { AuthorAvatar } from './AuthorAvatar';
 import { ViralityBadge } from './ViralityBadge';
 import { MetricRow } from './MetricPill';
@@ -70,7 +71,7 @@ export function FeaturedArticleCard({
         </h2>
 
         {/* Domain */}
-        {article.domain && article.domain !== 'x.com' && (
+        {article.domain && !isTwitterDomain(article.domain) && (
           <span
             className="
             inline-block px-2 py-0.5
@@ -96,7 +97,7 @@ export function FeaturedArticleCard({
         <MetricRow
           likes={article.likes}
           retweets={article.retweets}
-          impressions={article.impressions}
+          replies={article.replies}
           size="md"
         />
 

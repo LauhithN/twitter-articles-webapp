@@ -1,9 +1,9 @@
 // Styled engagement metrics - Server Component
 
-import { HeartIcon, RetweetIcon, ChartIcon } from './Icons';
+import { HeartIcon, RetweetIcon, ReplyIcon, ChartIcon } from './Icons';
 import { formatNumber } from '@/lib/utils';
 
-type MetricType = 'likes' | 'retweets' | 'impressions';
+type MetricType = 'likes' | 'retweets' | 'replies' | 'impressions';
 
 interface MetricPillProps {
   type: MetricType;
@@ -32,6 +32,12 @@ const metricConfig: Record<
     label: 'Reposts',
     hotThreshold: 5_000,
     viralThreshold: 50_000,
+  },
+  replies: {
+    icon: ReplyIcon,
+    label: 'Replies',
+    hotThreshold: 2_500,
+    viralThreshold: 25_000,
   },
   impressions: {
     icon: ChartIcon,
@@ -83,10 +89,10 @@ export function MetricPill({ type, value, size = 'md', showLabel = false }: Metr
 interface MetricLargeProps {
   likes: number;
   retweets: number;
-  impressions: number;
+  replies: number;
 }
 
-export function MetricLarge({ likes, retweets, impressions }: MetricLargeProps) {
+export function MetricLarge({ likes, retweets, replies }: MetricLargeProps) {
   return (
     <div className="flex items-center gap-8">
       <div className="text-center">
@@ -104,10 +110,10 @@ export function MetricLarge({ likes, retweets, impressions }: MetricLargeProps) 
       </div>
       <div className="w-px h-12 bg-border-subtle" />
       <div className="text-center">
-        <div className="font-mono text-metric-xl text-accent tabular-nums">
-          {formatNumber(impressions)}
+        <div className="font-mono text-metric-xl text-amber-300 tabular-nums">
+          {formatNumber(replies)}
         </div>
-        <div className="text-label text-text-muted uppercase tracking-widest mt-1">Views</div>
+        <div className="text-label text-text-muted uppercase tracking-widest mt-1">Replies</div>
       </div>
     </div>
   );
@@ -117,16 +123,16 @@ export function MetricLarge({ likes, retweets, impressions }: MetricLargeProps) 
 interface MetricRowProps {
   likes: number;
   retweets: number;
-  impressions: number;
+  replies: number;
   size?: 'sm' | 'md';
 }
 
-export function MetricRow({ likes, retweets, impressions, size = 'md' }: MetricRowProps) {
+export function MetricRow({ likes, retweets, replies, size = 'md' }: MetricRowProps) {
   return (
     <div className="flex items-center gap-4">
       <MetricPill type="likes" value={likes} size={size} />
       <MetricPill type="retweets" value={retweets} size={size} />
-      <MetricPill type="impressions" value={impressions} size={size} />
+      <MetricPill type="replies" value={replies} size={size} />
     </div>
   );
 }

@@ -7,7 +7,8 @@ import type { Article } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 import { useBookmarks } from '@/lib/hooks/useLocalStorage';
 import { getArticleBookmarkKeys } from '@/lib/article-views';
-import { HeartIcon, RetweetIcon, ChartIcon, BookmarkIcon, BookmarkFilledIcon } from './Icons';
+import { isTwitterDomain } from '@/lib/article-source';
+import { HeartIcon, RetweetIcon, ReplyIcon, BookmarkIcon, BookmarkFilledIcon } from './Icons';
 
 interface ArticleCardProps {
   article: Article;
@@ -78,7 +79,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
         </h2>
 
         {/* Domain badge */}
-        {article.domain && article.domain !== 'x.com' && (
+        {article.domain && !isTwitterDomain(article.domain) && (
           <div className="mb-4">
             <span className="inline-block rounded-lg glass px-2.5 py-1 text-xs text-white/50">
               {article.domain}
@@ -101,9 +102,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <ChartIcon className="h-4 w-4 text-white/40" />
-            <span className="font-medium tabular-nums text-white/60">
-              {formatNumber(article.impressions)}
+            <ReplyIcon className="h-4 w-4 text-white/40" />
+            <span className="font-medium tabular-nums text-amber-300">
+              {formatNumber(article.replies)}
             </span>
           </div>
         </div>

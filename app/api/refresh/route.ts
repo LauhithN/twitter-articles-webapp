@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { fetchFreshArticlesFromRss } from '@/lib/free-rss';
 import type { Article } from '@/lib/types';
+import { isTwitterArticle } from '@/lib/article-source';
 
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_WINDOW = 60_000;
@@ -34,6 +35,27 @@ function getServiceSupabaseClient(): SupabaseClient | null {
 }
 
 function toFullUpsertPayload(article: Article) {
+  return {
+    url: article.url,
+    title: article.title,
+    domain: article.domain,
+    tweet_count: article.tweet_count,
+    first_seen_at: article.first_seen_at,
+    likes: article.likes,
+    retweets: article.retweets,
+    replies: article.replies,
+    impressions: article.impressions,
+    bookmarks: article.bookmarks,
+    shares: article.shares,
+    author_name: article.author_name,
+    author_username: article.author_username,
+    author_url: article.author_url,
+    last_updated_at: article.last_updated_at,
+    description: article.description,
+  };
+}
+
+function toFullUpsertPayloadWithoutReplies(article: Article) {
   return {
     url: article.url,
     title: article.title,
@@ -100,7 +122,7 @@ async function pruneOldArticles(client: SupabaseClient, maxAgeDays: number): Pro
 async function upsertArticles(
   client: SupabaseClient,
   articles: Article[]
-): Promise<{ written: number; schemaMode: 'full' | 'legacy' }> {
+): Promise<{ written: number; schemaMode: 'full' | 'full_no_replies' | 'legacy' }> {
   const options = { onConflict: 'url', ignoreDuplicates: false };
 
   const { error: fullError } = await client
@@ -109,6 +131,24 @@ async function upsertArticles(
 
   if (!fullError) {
     return { written: articles.length, schemaMode: 'full' };
+  }
+
+  const fullErrorMessage = fullError.message ?? '';
+  const missingRepliesColumn =
+    /column .* does not exist/i.test(fullErrorMessage) && /replies/i.test(fullErrorMessage);
+
+  if (missingRepliesColumn) {
+    const { error: withoutRepliesError } = await client
+      .from('articles')
+      .upsert(articles.map(toFullUpsertPayloadWithoutReplies), options);
+
+    if (!withoutRepliesError) {
+      return { written: articles.length, schemaMode: 'full_no_replies' };
+    }
+
+    if (!/column .* does not exist/i.test(withoutRepliesError.message)) {
+      throw withoutRepliesError;
+    }
   }
 
   if (!/column .* does not exist/i.test(fullError.message)) {
@@ -143,7 +183,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const freshArticles = await fetchFreshArticlesFromRss(200);
+  const freshArticles = (await fetchFreshArticlesFromRss(200)).filter(isTwitterArticle);
 
   if (freshArticles.length === 0) {
     return NextResponse.json(
@@ -155,7 +195,7 @@ export async function POST(request: Request) {
   let persisted = false;
   let written = 0;
   let pruned = 0;
-  let schemaMode: 'full' | 'legacy' | 'none' = 'none';
+  let schemaMode: 'full' | 'full_no_replies' | 'legacy' | 'none' = 'none';
 
   const supabase = getServiceSupabaseClient();
   if (supabase) {

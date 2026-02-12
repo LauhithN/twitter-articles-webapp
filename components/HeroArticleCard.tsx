@@ -1,6 +1,7 @@
 // Hero treatment for #1 article - Server Component
 
 import { Article } from '@/lib/types';
+import { isTwitterDomain } from '@/lib/article-source';
 import { AuthorAvatar } from './AuthorAvatar';
 import { ViralityBadge } from './ViralityBadge';
 import { MetricLarge } from './MetricPill';
@@ -76,7 +77,7 @@ export function HeroArticleCard({ article, rank = 1 }: HeroArticleCardProps) {
         </h2>
 
         {/* Domain tag */}
-        {article.domain && article.domain !== 'x.com' && (
+        {article.domain && !isTwitterDomain(article.domain) && (
           <div className="mb-6">
             <span
               className="
@@ -96,7 +97,7 @@ export function HeroArticleCard({ article, rank = 1 }: HeroArticleCardProps) {
           <MetricLarge
             likes={article.likes}
             retweets={article.retweets}
-            impressions={article.impressions}
+            replies={article.replies}
           />
         </div>
 

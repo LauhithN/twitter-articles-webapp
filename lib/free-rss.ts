@@ -1,4 +1,6 @@
 import type { Article } from './types';
+import { getWeightedEngagement } from './engagement';
+import { isTwitterArticle } from './article-source';
 
 // ─── Twitter Viral Content Configuration ────────────────────────────────────────
 // We fetch from accounts that frequently post viral content and filter by engagement
@@ -55,7 +57,7 @@ const RECENT_ARTICLE_WINDOW_DAYS = 30;
 const SYNDICATION_TIMELINE_URL = 'https://syndication.twitter.com/srv/timeline-profile/screen-name';
 
 // Minimum engagement threshold for an article to be considered "viral"
-const MIN_ENGAGEMENT_SCORE = 50; // likes + retweets * 2
+const MIN_ENGAGEMENT_SCORE = 50; // likes + (retweets * 2) + (replies * 1.5)
 
 // ─── In-memory cache to prevent articles from disappearing ───────────
 
@@ -132,7 +134,7 @@ function isArticleRecent(article: Article, maxAgeDays: number): boolean {
 
 // Calculate engagement score for sorting
 function getEngagementScore(article: Article): number {
-  return article.likes + article.retweets * 2 + article.bookmarks * 3;
+  return getWeightedEngagement(article);
 }
 
 // ─── Convert syndication tweet to Article ────────────────────────────
@@ -160,6 +162,7 @@ function tweetToArticle(tweet: SyndicationTweet): Article | null {
     tweet_count: 1,
     likes: tweet.favorite_count ?? 0,
     retweets: tweet.retweet_count ?? 0,
+    replies: tweet.reply_count ?? 0,
     impressions: 0,
     bookmarks: 0,
     shares: 0,
@@ -384,6 +387,7 @@ export async function fetchFreshArticlesFromRss(
 
   return allArticles
     .filter(a => isArticleRecent(a, maxAgeDays))
+    .filter(isTwitterArticle)
     .sort((a, b) => {
       // Sort by engagement score (highest first)
       const scoreA = getEngagementScore(a);

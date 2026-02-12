@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Article } from './types';
+import { isTwitterArticle } from './article-source';
 
 let supabase: SupabaseClient | null = null;
 const RECENT_ARTICLE_WINDOW_DAYS = 30; // Increased from 14 to 30 days to get more articles
@@ -53,6 +54,7 @@ function normalizeArticle(row: Record<string, unknown>): Article {
     tweet_count: toNumber(row.tweet_count),
     likes: toNumber(row.likes),
     retweets: toNumber(row.retweets),
+    replies: toNumber(row.replies),
     impressions: toNumber(row.impressions),
     bookmarks: toNumber(row.bookmarks),
     shares: toNumber(row.shares),
@@ -95,17 +97,22 @@ export async function getArticles(
   const cutoffIso = getRecentCutoffIso(maxAgeDays);
 
   try {
+    const queryLimit = Math.max(limit * 3, limit);
+
     const fullQuery = client
       .from('articles')
       .select('*')
       .gte('first_seen_at', cutoffIso)
       .order('last_updated_at', { ascending: false })
       .order('likes', { ascending: false })
-      .limit(limit);
+      .limit(queryLimit);
     const { data: fullData, error: fullError } = await fullQuery;
 
     if (!fullError) {
-      return ((fullData as Record<string, unknown>[] | null) ?? []).map(normalizeArticle);
+      return ((fullData as Record<string, unknown>[] | null) ?? [])
+        .map(normalizeArticle)
+        .filter(isTwitterArticle)
+        .slice(0, limit);
     }
 
     if (!isMissingColumnError(fullError)) {
@@ -119,7 +126,7 @@ export async function getArticles(
       .gte('last_updated_at', cutoffIso)
       .order('last_updated_at', { ascending: false })
       .order('likes', { ascending: false })
-      .limit(limit);
+      .limit(queryLimit);
     const { data: fallbackData, error: fallbackError } = await fallbackQuery;
 
     if (fallbackError) {
@@ -127,7 +134,10 @@ export async function getArticles(
       return [];
     }
 
-    return ((fallbackData as Record<string, unknown>[] | null) ?? []).map(normalizeArticle);
+    return ((fallbackData as Record<string, unknown>[] | null) ?? [])
+      .map(normalizeArticle)
+      .filter(isTwitterArticle)
+      .slice(0, limit);
   } catch (err) {
     console.error('Failed to fetch articles:', err);
     return [];

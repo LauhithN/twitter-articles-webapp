@@ -28,10 +28,11 @@ function getViewLabel(view: SidebarView): string {
 }
 
 function getViewDescription(view: SidebarView, totalCount: number): string {
-  if (view === 'rising') return `Ranked by engagement velocity across ${totalCount} live records.`;
+  if (view === 'rising')
+    return `Ranked by engagement velocity (likes, retweets, replies) across ${totalCount} records.`;
   if (view === 'saved') return 'Articles you bookmarked locally on this browser.';
   if (view === 'analytics') return `Snapshot metrics from ${totalCount} live records.`;
-  return `Ranked by weighted engagement across ${totalCount} live records.`;
+  return `Ranked by engagement (likes, retweets, replies) across ${totalCount} live records.`;
 }
 
 function getViewIcon(view: SidebarView) {
@@ -65,8 +66,10 @@ function AnalyticsPanel({ articles }: { articles: Article[] }) {
   const summary = useMemo(() => summarizeAnalytics(articles), [articles]);
   const metrics = [
     { label: 'Articles', value: formatNumber(summary.totalArticles) },
+    { label: 'Engagements', value: formatNumber(summary.totalEngagements) },
     { label: 'Likes', value: formatNumber(summary.totalLikes) },
     { label: 'Retweets', value: formatNumber(summary.totalRetweets) },
+    { label: 'Replies', value: formatNumber(summary.totalReplies) },
     { label: 'Impressions', value: formatNumber(summary.totalImpressions) },
     { label: 'Bookmarks', value: formatNumber(summary.totalBookmarks) },
     { label: 'Shares', value: formatNumber(summary.totalShares) },
@@ -76,9 +79,8 @@ function AnalyticsPanel({ articles }: { articles: Article[] }) {
     <section className="mb-6 rounded-2xl glass-highlight p-5">
       <div className="mb-4 flex items-center justify-between gap-4">
         <h3 className="text-base font-semibold text-white/85">Live analytics</h3>
-        <span className="text-sm text-white/50">Top author: {summary.topAuthor}</span>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {metrics.map(metric => (
           <div key={metric.label} className="rounded-xl glass p-3">
             <div className="text-xs uppercase tracking-wide text-white/45">{metric.label}</div>

@@ -4,6 +4,7 @@ import { ArticleGrid } from '@/components/ArticleGrid';
 import type { Article } from '@/lib/types';
 import { fetchFreshArticlesFromRss } from '@/lib/free-rss';
 import { getArticles, getLastUpdatedTime, isTimestampStale } from '@/lib/supabase';
+import { isTwitterArticle } from '@/lib/article-source';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ async function loadArticles(): Promise<{ articles: Article[]; lastUpdated: strin
   // Try Supabase first
   try {
     articles = await getArticles(200);
+    articles = articles.filter(isTwitterArticle);
     lastUpdated = await getLastUpdatedTime();
   } catch (error) {
     console.error('Failed to fetch articles from Supabase:', error);
@@ -30,7 +32,7 @@ async function loadArticles(): Promise<{ articles: Article[]; lastUpdated: strin
     try {
       const liveArticles = await fetchFreshArticlesFromRss(200);
       if (liveArticles.length > 0) {
-        articles = liveArticles;
+        articles = liveArticles.filter(isTwitterArticle);
         lastUpdated = new Date().toISOString();
       }
     } catch (error) {
@@ -43,7 +45,7 @@ async function loadArticles(): Promise<{ articles: Article[]; lastUpdated: strin
     try {
       const fallbackArticles = await fetchFreshArticlesFromRss(200, 30);
       if (fallbackArticles.length > 0) {
-        articles = fallbackArticles;
+        articles = fallbackArticles.filter(isTwitterArticle);
         lastUpdated = new Date().toISOString();
       }
     } catch (error) {
