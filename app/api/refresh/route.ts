@@ -147,7 +147,7 @@ export async function POST(request: Request) {
 
   if (freshArticles.length === 0) {
     return NextResponse.json(
-      { error: 'No fresh RSS articles found. Try again in a minute.' },
+      { error: 'No articles found from any source. Try again in a minute.' },
       { status: 503 }
     );
   }
@@ -179,8 +179,8 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       message: persisted
-        ? 'Data refreshed using free RSS feeds and saved to Supabase.'
-        : 'Data refreshed from free RSS feeds. Add a Supabase service key to persist updates.',
+        ? 'Data refreshed and saved to database.'
+        : 'Data refreshed from live sources (no database configured).',
       fetched: freshArticles.length,
       persisted,
       written,

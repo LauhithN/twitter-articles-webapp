@@ -14,6 +14,7 @@ async function loadArticles(): Promise<{ articles: Article[]; lastUpdated: strin
   let articles: Article[] = [];
   let lastUpdated: string | null = null;
 
+  // Try Supabase first
   try {
     articles = await getArticles(50);
     lastUpdated = await getLastUpdatedTime();
@@ -21,6 +22,7 @@ async function loadArticles(): Promise<{ articles: Article[]; lastUpdated: strin
     console.error('Failed to fetch articles from Supabase:', error);
   }
 
+  // Always fetch live if DB is empty or stale
   const shouldFetchLive = articles.length === 0 || isTimestampStale(lastUpdated, STALE_AFTER_HOURS);
 
   if (shouldFetchLive) {
@@ -32,6 +34,19 @@ async function loadArticles(): Promise<{ articles: Article[]; lastUpdated: strin
       }
     } catch (error) {
       console.error('Failed to fetch live RSS articles:', error);
+    }
+  }
+
+  // Last resort: if still empty, try RSS one more time with longer window
+  if (articles.length === 0) {
+    try {
+      const fallbackArticles = await fetchFreshArticlesFromRss(50, 30);
+      if (fallbackArticles.length > 0) {
+        articles = fallbackArticles;
+        lastUpdated = new Date().toISOString();
+      }
+    } catch (error) {
+      console.error('Fallback RSS fetch also failed:', error);
     }
   }
 
