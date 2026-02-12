@@ -18,8 +18,22 @@ const ARTICLE_AUTHORS = [
   'george__mack',
 ];
 
-const RECENT_ARTICLE_WINDOW_DAYS = 7;
+const RECENT_ARTICLE_WINDOW_DAYS = 14;
 const SYNDICATION_TIMELINE_URL = 'https://syndication.twitter.com/srv/timeline-profile/screen-name';
+
+// ─── In-memory cache to prevent articles from disappearing ───────────
+
+interface ArticleCache {
+  articles: Map<string, Article>;
+  lastSuccessfulFetch: number;
+}
+
+const articleCache: ArticleCache = {
+  articles: new Map(),
+  lastSuccessfulFetch: 0,
+};
+
+const CACHE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 // ─── Types for the syndication response ──────────────────────────────
 
@@ -48,16 +62,6 @@ interface TimelineEntry {
   type?: string;
   content?: {
     tweet?: SyndicationTweet;
-  };
-}
-
-interface SyndicationPageData {
-  props?: {
-    pageProps?: {
-      timeline?: {
-        entries?: TimelineEntry[];
-      };
-    };
   };
 }
 
@@ -128,6 +132,85 @@ function tweetToArticle(tweet: SyndicationTweet): Article | null {
   };
 }
 
+// ─── Extract tweet from any entry shape ──────────────────────────────
+
+function extractTweetFromEntry(entry: unknown): SyndicationTweet | null {
+  if (!entry || typeof entry !== 'object') return null;
+
+  const obj = entry as Record<string, unknown>;
+
+  // Standard path: entry.content.tweet
+  if (obj.content && typeof obj.content === 'object') {
+    const content = obj.content as Record<string, unknown>;
+    if (content.tweet && typeof content.tweet === 'object') {
+      return content.tweet as SyndicationTweet;
+    }
+  }
+
+  // Alt path: entry itself might be a tweet-like object
+  if (obj.id_str && (obj.text || obj.full_text)) {
+    return obj as unknown as SyndicationTweet;
+  }
+
+  // Alt path: entry.tweet directly
+  if (obj.tweet && typeof obj.tweet === 'object') {
+    return obj.tweet as SyndicationTweet;
+  }
+
+  return null;
+}
+
+// ─── Parse page data with multiple strategies ────────────────────────
+
+function extractArticlesFromPageData(json: unknown, username: string): Article[] {
+  const articles: Article[] = [];
+  if (!json || typeof json !== 'object') return articles;
+
+  const root = json as Record<string, unknown>;
+
+  // Strategy 1: Standard __NEXT_DATA__ path
+  const props = root.props as Record<string, unknown> | undefined;
+  const pageProps = props?.pageProps as Record<string, unknown> | undefined;
+  const timeline = pageProps?.timeline as Record<string, unknown> | undefined;
+  let entries = timeline?.entries as unknown[] | undefined;
+
+  // Strategy 2: Try alternate paths if standard path yields nothing
+  if (!entries || entries.length === 0) {
+    // Try timeline at root level
+    const rootTimeline = root.timeline as Record<string, unknown> | undefined;
+    entries = rootTimeline?.entries as unknown[] | undefined;
+  }
+
+  if (!entries || entries.length === 0) {
+    // Try props.pageProps.data.entries
+    const data = pageProps?.data as Record<string, unknown> | undefined;
+    entries = data?.entries as unknown[] | undefined;
+  }
+
+  if (!entries || !Array.isArray(entries)) {
+    console.warn(`[free-rss] ${username}: No entries found in page data`);
+    return articles;
+  }
+
+  for (const entry of entries) {
+    const entryObj = entry as TimelineEntry;
+
+    // Accept entries of type 'tweet' or entries with no type but containing tweet data
+    if (entryObj.type && entryObj.type !== 'tweet') continue;
+
+    const tweet = extractTweetFromEntry(entry);
+    if (!tweet) continue;
+
+    // Skip replies to other users
+    if (tweet.in_reply_to_status_id_str) continue;
+
+    const article = tweetToArticle(tweet);
+    if (article) articles.push(article);
+  }
+
+  return articles;
+}
+
 // ─── Fetch timeline for a single author ──────────────────────────────
 
 async function fetchAuthorTimeline(username: string): Promise<Article[]> {
@@ -136,11 +219,12 @@ async function fetchAuthorTimeline(username: string): Promise<Article[]> {
   try {
     const response = await fetch(url, {
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(20_000),
       headers: {
         'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
       },
     });
 
@@ -151,37 +235,41 @@ async function fetchAuthorTimeline(username: string): Promise<Article[]> {
 
     const html = await response.text();
 
-    // Extract __NEXT_DATA__ JSON blob
+    // Try __NEXT_DATA__ script tag first
     const nextDataPattern = /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i;
-    const match = html.match(nextDataPattern);
+    let match = html.match(nextDataPattern);
+
+    // Fallback: try any script tag containing timeline data
     if (!match || !match[1]) {
-      console.error(`[free-rss] ${username}: No __NEXT_DATA__ found (html length: ${html.length})`);
+      const genericPattern = /<script[^>]*>([\s\S]*?"timeline"[\s\S]*?)<\/script>/i;
+      match = html.match(genericPattern);
+    }
+
+    if (!match || !match[1]) {
+      // Last resort: try to find JSON blob in the HTML
+      const jsonBlobPattern = /\{[\s\S]*"timeline"[\s\S]*"entries"[\s\S]*\}/;
+      const jsonMatch = html.match(jsonBlobPattern);
+      if (jsonMatch) {
+        match = [jsonMatch[0], jsonMatch[0]];
+      }
+    }
+
+    if (!match || !match[1]) {
+      console.error(`[free-rss] ${username}: No timeline data found (html length: ${html.length})`);
       return [];
     }
 
-    let pageData: SyndicationPageData;
+    let pageData: unknown;
     try {
       pageData = JSON.parse(match[1]);
     } catch {
-      console.error(`[free-rss] ${username}: Failed to parse __NEXT_DATA__ JSON`);
+      console.error(
+        `[free-rss] ${username}: Failed to parse JSON (snippet: ${match[1].slice(0, 200)})`
+      );
       return [];
     }
 
-    const entries = pageData?.props?.pageProps?.timeline?.entries ?? [];
-    const articles: Article[] = [];
-
-    for (const entry of entries) {
-      if (entry.type !== 'tweet') continue;
-
-      const tweet = entry.content?.tweet;
-      if (!tweet) continue;
-
-      // Skip replies to other users
-      if (tweet.in_reply_to_status_id_str) continue;
-
-      const article = tweetToArticle(tweet);
-      if (article) articles.push(article);
-    }
+    const articles = extractArticlesFromPageData(pageData, username);
 
     console.log(`[free-rss] ${username}: fetched ${articles.length} tweets`);
     return articles;
@@ -194,26 +282,57 @@ async function fetchAuthorTimeline(username: string): Promise<Article[]> {
 // ─── Main export ─────────────────────────────────────────────────────
 
 export async function fetchFreshArticlesFromRss(
-  limit: number = 50,
+  limit: number = 200,
   maxAgeDays: number = RECENT_ARTICLE_WINDOW_DAYS
 ): Promise<Article[]> {
   const results = await Promise.allSettled(
     ARTICLE_AUTHORS.map(username => fetchAuthorTimeline(username))
   );
 
-  const deduped = new Map<string, Article>();
+  const freshArticles = new Map<string, Article>();
+  let totalFetched = 0;
 
   for (const result of results) {
     if (result.status !== 'fulfilled') continue;
 
     for (const article of result.value) {
-      if (!deduped.has(article.url)) {
-        deduped.set(article.url, article);
+      totalFetched++;
+      if (!freshArticles.has(article.url)) {
+        freshArticles.set(article.url, article);
       }
     }
   }
 
-  return Array.from(deduped.values())
+  console.log(`[free-rss] Total fetched: ${totalFetched}, unique: ${freshArticles.size}`);
+
+  // Update cache with fresh articles (merge, don't replace)
+  if (freshArticles.size > 0) {
+    Array.from(freshArticles.entries()).forEach(([url, article]) => {
+      articleCache.articles.set(url, article);
+    });
+    articleCache.lastSuccessfulFetch = Date.now();
+  }
+
+  // Prune stale articles from cache
+  const cacheAgeLimit = Date.now() - CACHE_MAX_AGE_MS;
+  Array.from(articleCache.articles.entries()).forEach(([url, article]) => {
+    const articleDate = new Date(article.first_seen_at).getTime();
+    if (articleDate < cacheAgeLimit) {
+      articleCache.articles.delete(url);
+    }
+  });
+
+  // Use cache as the source (it contains both fresh + previously cached articles)
+  const allArticles =
+    articleCache.articles.size > 0
+      ? Array.from(articleCache.articles.values())
+      : Array.from(freshArticles.values());
+
+  console.log(
+    `[free-rss] Cache size: ${articleCache.articles.size}, serving: ${allArticles.length}`
+  );
+
+  return allArticles
     .filter(a => isArticleRecent(a, maxAgeDays))
     .sort((a, b) => {
       const scoreA = a.likes + a.retweets * 2;

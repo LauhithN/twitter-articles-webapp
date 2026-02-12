@@ -6,7 +6,7 @@ import type { Article } from '@/lib/types';
 
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_WINDOW = 60_000;
-const RECENT_ARTICLE_WINDOW_DAYS = 7;
+const RECENT_ARTICLE_WINDOW_DAYS = 14;
 
 function getClientId(request: Request): string {
   const forwardedFor = request.headers.get('x-forwarded-for');
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const freshArticles = await fetchFreshArticlesFromRss(50);
+  const freshArticles = await fetchFreshArticlesFromRss(200);
 
   if (freshArticles.length === 0) {
     return NextResponse.json(
