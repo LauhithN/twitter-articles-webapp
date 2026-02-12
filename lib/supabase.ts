@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Article } from './types';
 
 let supabase: SupabaseClient | null = null;
-const RECENT_ARTICLE_WINDOW_DAYS = 14;
+const RECENT_ARTICLE_WINDOW_DAYS = 30; // Increased from 14 to 30 days to get more articles
 
 function getSupabaseClient(): SupabaseClient | null {
   if (supabase) return supabase;

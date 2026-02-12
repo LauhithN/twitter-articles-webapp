@@ -1,25 +1,61 @@
 import type { Article } from './types';
 
-// ─── X.com authors to monitor ────────────────────────────────────────
+// ─── Twitter Viral Content Configuration ────────────────────────────────────────
+// We fetch from accounts that frequently post viral content and filter by engagement
 
-const ARTICLE_AUTHORS = [
-  'mattshumer_',
-  'thedankoe',
-  'naval',
-  'alexhormozi',
-  'levelsio',
-  'karpathy',
-  'JamesClear',
-  'SahilBloom',
-  'waitbutwhy',
-  'david_perell',
-  'dickiebush',
-  'Nicolascole77',
-  'george__mack',
+// Accounts that frequently post viral threads and long-form content
+// These are curated accounts known for high-engagement posts
+const VIRAL_CONTENT_ACCOUNTS = [
+  // Business & Entrepreneurship - known for viral threads
+  'thedankoe', // Dan Koe - viral business threads
+  'alexhormozi', // Alex Hormozi - viral business content
+  'SahilBloom', // Sahil Bloom - viral finance threads
+  'dickiebush', // Dickie Bush - viral writing threads
+  'Nicolascole77', // Nicolas Cole - viral writing content
+  'george__mack', // George Mack - viral business threads
+
+  // Self-improvement & Productivity
+  'JamesClear', // James Clear - habits, productivity
+  'ShaneAParrish', // Shane Parrish - mental models
+  'morganhousel', // Morgan Housel - finance, psychology
+
+  // Tech & Startups
+  'naval', // Naval Ravikant - wealth, philosophy
+  'levelsio', // Pieter Levels - indie hacking
+  'karpathy', // Andrej Karpathy - AI, tech
+
+  // Writing & Content Creation
+  'david_perell', // David Perell - writing
+  'Julian', // Julian Shapiro - startups, writing
+
+  // Finance & Investing
+  'APompliano', // Anthony Pompliano - finance
+  'RaoulGMI', // Raoul Pal - macro finance
+
+  // Additional viral content creators
+  'waitbutwhy', // Tim Urban - long-form essays
+  'mattshumer_', // Matt Shumer - AI, tech
+  'garry', // Garry Tan - startups
+  'dvassallo', // Daniel Vassallo - indie hacking
+  'patio11', // Patrick McKenzie - business
+  'briannorgard', // Brian Norgard - marketing
+  'rorysutherland', // Rory Sutherland - marketing psychology
+  'trengriffin', // Tren Griffin - business
+  'tylercowen', // Tyler Cowen - economics
+  'farnamstreet', // Farnam Street - mental models
+  'awilkinson', // Andrew Wilkinson - indie hacking
+  'patrickc', // Patrick Collison - tech
+  'pmarca', // Marc Andreessen - tech, investing
+  'balajis', // Balaji Srinivasan - tech
+  'sama', // Sam Altman - AI, startups
+  'paulg', // Paul Graham - startups, essays
 ];
 
-const RECENT_ARTICLE_WINDOW_DAYS = 14;
+const RECENT_ARTICLE_WINDOW_DAYS = 30;
 const SYNDICATION_TIMELINE_URL = 'https://syndication.twitter.com/srv/timeline-profile/screen-name';
+
+// Minimum engagement threshold for an article to be considered "viral"
+const MIN_ENGAGEMENT_SCORE = 50; // likes + retweets * 2
 
 // ─── In-memory cache to prevent articles from disappearing ───────────
 
@@ -69,11 +105,11 @@ interface TimelineEntry {
 
 function decodeHtmlEntities(input: string): string {
   return input
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, "'");
 }
 
 function truncate(value: string, maxLength: number): string {
@@ -92,6 +128,11 @@ function isArticleRecent(article: Article, maxAgeDays: number): boolean {
   if (Number.isNaN(publishedAt.getTime())) return false;
   const cutoffMs = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
   return publishedAt.getTime() >= cutoffMs;
+}
+
+// Calculate engagement score for sorting
+function getEngagementScore(article: Article): number {
+  return article.likes + article.retweets * 2 + article.bookmarks * 3;
 }
 
 // ─── Convert syndication tweet to Article ────────────────────────────
@@ -162,7 +203,7 @@ function extractTweetFromEntry(entry: unknown): SyndicationTweet | null {
 
 // ─── Parse page data with multiple strategies ────────────────────────
 
-function extractArticlesFromPageData(json: unknown, username: string): Article[] {
+function extractArticlesFromPageData(json: unknown, source: string): Article[] {
   const articles: Article[] = [];
   if (!json || typeof json !== 'object') return articles;
 
@@ -188,7 +229,7 @@ function extractArticlesFromPageData(json: unknown, username: string): Article[]
   }
 
   if (!entries || !Array.isArray(entries)) {
-    console.warn(`[free-rss] ${username}: No entries found in page data`);
+    console.warn(`[free-rss] ${source}: No entries found in page data`);
     return articles;
   }
 
@@ -285,8 +326,9 @@ export async function fetchFreshArticlesFromRss(
   limit: number = 200,
   maxAgeDays: number = RECENT_ARTICLE_WINDOW_DAYS
 ): Promise<Article[]> {
+  // Fetch from all viral content accounts
   const results = await Promise.allSettled(
-    ARTICLE_AUTHORS.map(username => fetchAuthorTimeline(username))
+    VIRAL_CONTENT_ACCOUNTS.map(username => fetchAuthorTimeline(username))
   );
 
   const freshArticles = new Map<string, Article>();
@@ -297,13 +339,21 @@ export async function fetchFreshArticlesFromRss(
 
     for (const article of result.value) {
       totalFetched++;
-      if (!freshArticles.has(article.url)) {
+
+      // Calculate engagement score
+      const engagementScore = getEngagementScore(article);
+
+      // Only include articles that meet the minimum engagement threshold
+      // This ensures we're showing viral content, not just any tweet
+      if (engagementScore >= MIN_ENGAGEMENT_SCORE && !freshArticles.has(article.url)) {
         freshArticles.set(article.url, article);
       }
     }
   }
 
-  console.log(`[free-rss] Total fetched: ${totalFetched}, unique: ${freshArticles.size}`);
+  console.log(
+    `[free-rss] Total fetched: ${totalFetched}, viral articles (engagement >= ${MIN_ENGAGEMENT_SCORE}): ${freshArticles.size}`
+  );
 
   // Update cache with fresh articles (merge, don't replace)
   if (freshArticles.size > 0) {
@@ -335,9 +385,11 @@ export async function fetchFreshArticlesFromRss(
   return allArticles
     .filter(a => isArticleRecent(a, maxAgeDays))
     .sort((a, b) => {
-      const scoreA = a.likes + a.retweets * 2;
-      const scoreB = b.likes + b.retweets * 2;
+      // Sort by engagement score (highest first)
+      const scoreA = getEngagementScore(a);
+      const scoreB = getEngagementScore(b);
       if (scoreB !== scoreA) return scoreB - scoreA;
+      // Secondary sort by recency
       return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime();
     })
     .slice(0, limit);
