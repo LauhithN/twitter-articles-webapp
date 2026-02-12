@@ -74,7 +74,7 @@ function parseRssItems(xml: string): RssItem[] {
   const items: RssItem[] = [];
   const itemPattern = /<item>([\s\S]*?)<\/item>/gi;
 
-  for (const match of xml.matchAll(itemPattern)) {
+  for (const match of Array.from(xml.matchAll(itemPattern))) {
     const block = match[1];
     if (!block) continue;
 
